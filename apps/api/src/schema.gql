@@ -1,0 +1,50 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type DashboardStats {
+  activeOrders: Int!
+  totalOrders: Int!
+  totalRevenue: Float!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type OrderGql {
+  createdAt: DateTime!
+  customerName: String
+  driverName: String
+  id: ID!
+  notes: String
+  restaurantName: String
+  status: String!
+  totalPrice: Float!
+  updatedAt: DateTime!
+}
+
+type Query {
+  """Estatísticas do dashboard admin"""
+  dashboardStats: DashboardStats!
+
+  """Lista pedidos com filtros. Ideal para dashboard admin."""
+  orders(limit: Int! = 20, offset: Int! = 0, restaurantId: String, status: String): [OrderGql!]!
+
+  """Busca usuário por ID"""
+  user(id: ID!): User
+
+  """Lista todos os usuários"""
+  users: [User!]!
+}
+
+type User {
+  avatarUrl: String
+  createdAt: DateTime!
+  email: String!
+  id: ID!
+  name: String!
+  phone: String
+  role: String!
+}

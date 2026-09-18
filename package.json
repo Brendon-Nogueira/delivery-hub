@@ -1,0 +1,33 @@
+{
+  "name": "delivery-hub",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hub de Pedidos & Logística em Tempo Real",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "dev:api": "turbo dev --filter=@delivery-hub/api",
+    "dev:web": "turbo dev --filter=@delivery-hub/web",
+    "db:push": "turbo db:push --filter=@delivery-hub/api",
+    "db:seed": "turbo db:seed --filter=@delivery-hub/api",
+    "db:studio": "pnpm --filter @delivery-hub/api exec prisma studio"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@12.3.4",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@apollo/protobufjs",
+      "@nestjs/core",
+      "@prisma/client",
+      "@prisma/engines",
+      "bcrypt",
+      "prisma"
+    ]
+  },
+  "devDependencies": {
+    "turbo": "^2.10.12"
+  }
+}

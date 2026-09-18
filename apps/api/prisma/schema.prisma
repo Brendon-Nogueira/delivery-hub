@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  RESTAURANT_OWNER
+  DRIVER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  CONFIRMED
+  REJECTED
+  PREPARING
+  READY_FOR_PICKUP
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String
+  role         UserRole
+  phone        String?
+  avatarUrl    String?  @map("avatar_url")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  restaurant     Restaurant?
+  customerOrders Order[]          @relation("CustomerOrders")
+  driverOrders   Order[]          @relation("DriverOrders")
+  locations      DriverLocation[]
+
+  @@map("users")
+}
+
+model Restaurant {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  address     String
+  latitude    Float?
+  longitude   Float?
+  imageUrl    String?  @map("image_url")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  ownerId   String     @unique @map("owner_id")
+  owner     User       @relation(fields: [ownerId], references: [id])
+  menuItems MenuItem[]
+  orders    Order[]
+
+  @@map("restaurants")
+}
+
+model MenuItem {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  price       Decimal  @db.Decimal(10, 2)
+  imageUrl    String?  @map("image_url")
+  category    String
+  isAvailable Boolean  @default(true) @map("is_available")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  restaurantId String      @map("restaurant_id")
+  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id])
+  orderItems   OrderItem[]
+
+  @@map("menu_items")
+}
+
+model Order {
+  id         String      @id @default(uuid())
+  status     OrderStatus @default(PENDING)
+  totalPrice Decimal     @db.Decimal(10, 2) @map("total_price")
+  notes      String?
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+
+  customerId   String               @map("customer_id")
+  customer     User                 @relation("CustomerOrders", fields: [customerId], references: [id])
+  restaurantId String               @map("restaurant_id")
+  restaurant   Restaurant           @relation(fields: [restaurantId], references: [id])
+  driverId     String?              @map("driver_id")
+  driver       User?                @relation("DriverOrders", fields: [driverId], references: [id])
+  items        OrderItem[]
+  statusHistory OrderStatusHistory[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  quantity  Int
+  unitPrice Decimal @db.Decimal(10, 2) @map("unit_price")
+
+  orderId    String   @map("order_id")
+  order      Order    @relation(fields: [orderId], references: [id])
+  menuItemId String   @map("menu_item_id")
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+
+  @@map("order_items")
+}
+
+model OrderStatusHistory {
+  id        String      @id @default(uuid())
+  status    OrderStatus
+  note      String?
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  orderId String @map("order_id")
+  order   Order  @relation(fields: [orderId], references: [id])
+
+  @@map("order_status_history")
+}
+
+model DriverLocation {
+  id        String   @id @default(uuid())
+  latitude  Float
+  longitude Float
+  heading   Float?
+  speed     Float?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  driverId String @map("driver_id")
+  driver   User   @relation(fields: [driverId], references: [id])
+
+  @@index([driverId, createdAt(sort: Desc)])
+  @@map("driver_locations")
+}
