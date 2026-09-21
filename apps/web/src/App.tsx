@@ -1,359 +1,255 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
-import {
-  Bike,
-  MapPin,
-  Play,
-  RotateCcw,
-  Sparkles,
-  ShoppingBag,
-  Clock,
-  ShieldCheck,
-  Server,
-  Database,
-  Radio,
-  Send,
-  Zap,
-} from 'lucide-react';
-import { MapTracker } from './components/MapTracker';
-import { StatusStepper, ORDER_STAGES } from './components/StatusStepper';
-import { TelemetryLog, LogItem } from './components/TelemetryLog';
+import { RoleNavigation, Role } from './components/RoleNavigation';
+import { CustomerView } from './views/CustomerView';
+import { RestaurantView } from './views/RestaurantView';
+import { DriverView } from './views/DriverView';
+import { audioSynth } from './utils/audio';
 
-// Coordenadas padrão: Paraisópolis - MG
-const RESTAURANT_COORDS = { lat: -22.553800, lng: -45.779600 }; // Restaurante (Centro, Praça Cel. José Vieira - Paraisópolis MG)
-const CUSTOMER_COORDS = { lat: -22.559800, lng: -45.773500 };   // Cliente (Bairro Residencial - Paraisópolis MG)
-const ORDER_ID = 'HUB-842';
+type OrderStatus = 'PENDING' | 'PREPARING' | 'READY' | 'ON_THE_WAY' | 'DELIVERED';
 
-export function App() {
-  const [orderStatus, setOrderStatus] = useState<string>('IN_TRANSIT');
-  const [driverLocation, setDriverLocation] = useState<{ lat: number; lng: number; timestamp: string } | null>({
-    ...RESTAURANT_COORDS,
-    timestamp: new Date().toLocaleTimeString(),
-  });
-  const [wsConnected, setWsConnected] = useState<boolean>(false);
-  const [isSimulating, setIsSimulating] = useState<boolean>(false);
-  const [logs, setLogs] = useState<LogItem[]>([]);
-  const socketRef = useRef<Socket | null>(null);
-  const simulationTimerRef = useRef<any>(null);
+interface Order {
+  id: string;
+  status: OrderStatus;
+  createdAt: string;
+}
 
-  // Adiciona item de log no console de telemetria
-  const addLog = (source: LogItem['source'], message: string, payload?: any) => {
-    setLogs((prev) => [
-      {
-        id: Math.random().toString(36).substring(7),
-        time: new Date().toLocaleTimeString(),
-        source,
-        message,
-        payload,
-      },
-      ...prev.slice(0, 49),
-    ]);
-  };
+const API_URL = 'http://localhost:4000';
 
-  // Conexão com o WebSocket /delivery no backend NestJS
+function App() {
+  const [currentRole, setCurrentRole] = useState<Role>('CUSTOMER');
+  
+  // Sockets
+  const [ordersSocket, setOrdersSocket] = useState<Socket | null>(null);
+  const [deliverySocket, setDeliverySocket] = useState<Socket | null>(null);
+  const [connected, setConnected] = useState(false);
+  
+ 
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
+  const [driverLocation, setDriverLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Coordenadas fixas (Paraisópolis - MG)
+  const RESTAURANT_LOC = { lat: -22.553800, lng: -45.779600 }; // Praça Cel. José Vieira
+  const CUSTOMER_LOC = { lat: -22.548000, lng: -45.775000 }; // Um pouco afastado do centro
+
+  //Carrega pedidos existentes 
   useEffect(() => {
-    const wsUrl = 'http://localhost:4000/delivery';
-    const socket = io(wsUrl, {
-      transports: ['websocket', 'polling'],
-      timeout: 5000,
-    });
+    fetch(`${API_URL}/api/v1/orders/restaurant/rest-123`)
+      .then(res => res.ok ? res.json() : [])
+      .then((data: any[]) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const loaded: Order[] = data.map(d => ({
+            id: d.id,
+            status: d.status as OrderStatus,
+            createdAt: d.createdAt
+          }));
+          setOrders(loaded);
+          // Se não houver pedido ativo selecionado, seleciona o mais recente
+          setCurrentOrderId(prev => prev || loaded[0].id);
+        }
+      })
+      .catch(err => console.log('Histórico inicial:', err));
+  }, []);
 
-    socketRef.current = socket;
+  useEffect(() => {
+    // Conecta nos dois namespaces
+    const ordSocket = io(`${API_URL}/orders`);
+    const dlvSocket = io(`${API_URL}/delivery`);
 
-    socket.on('connect', () => {
-      setWsConnected(true);
-      addLog('WEBSOCKET', `Conectado ao namespace /delivery (Socket ID: ${socket.id})`);
+    setOrdersSocket(ordSocket);
+    setDeliverySocket(dlvSocket);
 
-      // room do pedido
-      socket.emit('joinDeliveryRoom', { orderId: ORDER_ID });
-      addLog('WEBSOCKET', `Entrou na room: order:${ORDER_ID}`);
-
-      // Solicita última localização no Redis
-      socket.emit('getLastLocation', { orderId: ORDER_ID });
-    });
-
-    socket.on('disconnect', () => {
-      setWsConnected(false);
-      addLog('WEBSOCKET', 'Desconectado do servidor WebSocket');
-    });
-
-    // Evento em tempo real transmitido pelo servidor
-    socket.on('driverLocationUpdate', (data: any) => {
-      if (data && data.lat && data.lng) {
-        setDriverLocation({
-          lat: data.lat,
-          lng: data.lng,
-          timestamp: data.timestamp || new Date().toLocaleTimeString(),
-        });
-        addLog('WEBSOCKET', `[driverLocationUpdate] GPS recebido`, {
-          lat: data.lat,
-          lng: data.lng,
-          orderId: data.orderId,
-        });
-        addLog('REDIS', `Chave atualizada: driver:location:${ORDER_ID} (TTL: 30s)`);
+    ordSocket.on('connect', () => {
+      setConnected(true);
+      ordSocket.emit('joinRestaurantRoom', { restaurantId: 'rest-123' });
+      if (currentOrderId) {
+        ordSocket.emit('joinOrderRoom', { orderId: currentOrderId });
       }
     });
+    ordSocket.on('disconnect', () => setConnected(false));
 
-    socket.on('lastLocation', (data: any) => {
-      if (data && data.lat) {
-        setDriverLocation(data);
-        addLog('REDIS', `Última localização obtida do Redis Cache`, data);
+    // Escuta evento emitido pelo OrdersGateway
+    const handleNewOrder = (order: any) => {
+      const formattedOrder: Order = {
+        id: order.id,
+        status: order.status || 'PENDING',
+        createdAt: order.createdAt || new Date().toISOString()
+      };
+      setOrders(prev => {
+        if (prev.some(o => o.id === formattedOrder.id)) return prev;
+        return [formattedOrder, ...prev];
+      });
+      setCurrentOrderId(prev => prev || formattedOrder.id);
+    };
+
+    ordSocket.on('newOrder', handleNewOrder);
+    ordSocket.on('orderCreated', handleNewOrder);
+
+    // Escuta atualização de status
+    const handleStatusChanged = (data: { orderId: string, status: OrderStatus }) => {
+      setOrders(prev => prev.map(o => o.id === data.orderId ? { ...o, status: data.status } : o));
+      if (data.status !== 'PENDING') {
+        audioSynth.playSuccessSound();
       }
+    };
+
+    ordSocket.on('orderStatusChanged', handleStatusChanged);
+    ordSocket.on('orderStatusUpdated', handleStatusChanged);
+
+    // Escuta telemetria do entregador (GPS)
+    const handleLocationUpdate = (data: { orderId: string; lat: number; lng: number }) => {
+      setDriverLocation({ lat: data.lat, lng: data.lng });
+    };
+
+    dlvSocket.on('driverLocationUpdate', handleLocationUpdate);
+    dlvSocket.on('locationUpdate', handleLocationUpdate);
+
+    dlvSocket.on('deliveryComplete', () => {
+      setDriverLocation(null);
+      audioSynth.playSuccessSound();
     });
 
     return () => {
-      socket.disconnect();
+      ordSocket.disconnect();
+      dlvSocket.disconnect();
     };
-  }, []);
+  }, [currentOrderId]);
 
-  // Simulação de trajeto (interpola do restaurante até o cliente)
-  const startSimulation = () => {
-    if (isSimulating) {
-      clearInterval(simulationTimerRef.current);
-      setIsSimulating(false);
-      addLog('CLIENT', 'Simulação pausada pelo usuário');
-      return;
-    }
-
-    setIsSimulating(true);
-    setOrderStatus('IN_TRANSIT');
-    addLog('CLIENT', 'Iniciando simulação de trajeto do entregador...');
-
-    let step = 0;
-    const totalSteps = 16;
-
-    // Dispara também o endpoint backend se disponível
-    fetch(`http://localhost:4000/api/v1/delivery/simulate-trip/${ORDER_ID}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ steps: totalSteps }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        addLog('API', 'Backend ativou simulação no NestJS + Redis', data);
-      })
-      .catch(() => {
-        addLog('CLIENT', 'Executando simulação direta no frontend + WebSocket...');
+  // Ações do Cliente
+  const handleCreateOrder = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/api/v1/orders`, { 
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          restaurantId: 'rest-123',
+          items: [
+            { menuItemId: 'item-1', quantity: 1 }
+          ],
+          notes: 'Pedido Teste MVP'
+        })
       });
-
-    simulationTimerRef.current = setInterval(() => {
-      step++;
-      const ratio = Math.min(1, step / totalSteps);
-
-      // Deslocamento com curvas simulando quarteirões
-      const jitterLat = Math.sin(ratio * Math.PI * 3) * 0.0004;
-      const jitterLng = Math.cos(ratio * Math.PI * 2) * 0.0003;
-
-      const currentLat = Number((RESTAURANT_COORDS.lat + (CUSTOMER_COORDS.lat - RESTAURANT_COORDS.lat) * ratio + jitterLat).toFixed(6));
-      const currentLng = Number((RESTAURANT_COORDS.lng + (CUSTOMER_COORDS.lng - RESTAURANT_COORDS.lng) * ratio + jitterLng).toFixed(6));
-
-      const newLocation = {
-        lat: currentLat,
-        lng: currentLng,
-        timestamp: new Date().toLocaleTimeString(),
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      
+      const newOrder: Order = {
+        id: data.id,
+        status: data.status || 'PENDING',
+        createdAt: data.createdAt || new Date().toISOString()
       };
 
-      setDriverLocation(newLocation);
+      // Atualiza o estado local imediatamente para a tela avançar
+      setOrders(prev => [newOrder, ...prev.filter(o => o.id !== newOrder.id)]);
+      setCurrentOrderId(data.id);
 
-      // Se o socket estiver conectado, envia evento sendLocation
-      if (socketRef.current?.connected) {
-        socketRef.current.emit('sendLocation', {
-          orderId: ORDER_ID,
-          lat: currentLat,
-          lng: currentLng,
-        });
-      }
+      // Entra na sala do pedido nos sockets
+      ordersSocket?.emit('joinOrderRoom', { orderId: data.id });
+      deliverySocket?.emit('joinDeliveryRoom', { orderId: data.id });
 
-      addLog('CLIENT', `Posição do entregador emitida (Passo ${step}/${totalSteps})`, newLocation);
-
-      if (step >= totalSteps) {
-        clearInterval(simulationTimerRef.current);
-        setIsSimulating(false);
-        setOrderStatus('DELIVERED');
-        addLog('CLIENT', 'Entregador chegou ao destino! Pedido entregue!');
-      }
-    }, 1500);
-  };
-
-  const resetPosition = () => {
-    clearInterval(simulationTimerRef.current);
-    setIsSimulating(false);
-    setOrderStatus('PREPARING');
-    setDriverLocation({
-      ...RESTAURANT_COORDS,
-      timestamp: new Date().toLocaleTimeString(),
-    });
-    addLog('CLIENT', 'Posição do entregador resetada para o Restaurante');
-  };
-
-  const advanceOrderStatus = () => {
-    const currentIndex = ORDER_STAGES.findIndex((s) => s.key === orderStatus);
-    if (currentIndex < ORDER_STAGES.length - 1) {
-      const nextStatus = ORDER_STAGES[currentIndex + 1].key;
-      setOrderStatus(nextStatus);
-      addLog('API', `Status do pedido atualizado: ${nextStatus}`);
+      audioSynth.playSuccessSound();
+    } catch (error) {
+      console.error('Erro ao criar pedido:', error);
+      alert('Erro ao criar pedido. Verifique a conexão com o backend.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  // Ações do Restaurante
+  const handleUpdateStatus = (orderId: string, status: OrderStatus) => {
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
+    if (ordersSocket) {
+      ordersSocket.emit('updateOrderStatus', { orderId, status });
+    }
+  };
+
+  // Ações do Entregador
+  const handleAcceptDelivery = async (orderId: string) => {
+    handleUpdateStatus(orderId, 'ON_THE_WAY');
+    
+    // simulação de rota no backend
+    try {
+      await fetch(`${API_URL}/api/v1/delivery/simulate-trip/${orderId}`, { method: 'POST' });
+    } catch (error) {
+      console.error('Erro ao iniciar simulação de entrega', error);
+    }
+  };
+
+  const handleCompleteDelivery = (orderId: string) => {
+    handleUpdateStatus(orderId, 'DELIVERED');
+    setDriverLocation(null);
+    audioSynth.playSuccessSound();
+  };
+
+  const pendingCount = orders.filter(o => o.status === 'PENDING').length;
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
-          {/* Brand */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-orange-600 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/30 text-white">
-              <Bike className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-black tracking-tight text-white">DeliveryHub</h1>
-                <span className="text-[10px] bg-orange-500/20 text-orange-400 font-bold px-2 py-0.5 rounded-full border border-orange-500/30">
-                  GPS LIVE
-                </span>
-              </div>
-              <p className="text-xs text-slate-400">Rastreamento de Entregadores em Tempo Real • Paraisópolis - MG</p>
-            </div>
-          </div>
+    <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8 font-sans">
+      <div className="max-w-6xl mx-auto">
+        <header className="mb-8 text-center">
+          <h1 className="text-4xl font-black bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent mb-2">
+            DeliveryHub MVP
+          </h1>
+          <p className="text-slate-400 mb-6">Plataforma Real-Time • Paraisópolis, MG</p>
+          
+          {/* Navegação */}
+          <RoleNavigation 
+            currentRole={currentRole} 
+            onChangeRole={setCurrentRole} 
+            pendingOrdersCount={pendingCount}
+          />
+        </header>
 
-          {/* Indicators & Actions */}
-          <div className="flex items-center flex-wrap gap-3 text-xs">
-            {/* WebSocket Status */}
-            <div className="flex items-center gap-2 bg-slate-800/80 border border-slate-700/80 px-3 py-1.5 rounded-xl">
-              <span className={`w-2.5 h-2.5 rounded-full ${wsConnected ? 'bg-emerald-500 shadow-lg shadow-emerald-500/50' : 'bg-amber-500 animate-pulse'}`} />
-              <span className="text-slate-300 font-medium">
-                WS: <strong className={wsConnected ? 'text-emerald-400' : 'text-amber-400'}>{wsConnected ? 'Conectado (/delivery)' : 'Simulação Local'}</strong>
-              </span>
-            </div>
-
-            {/* Redis Status */}
-            <div className="flex items-center gap-2 bg-slate-800/80 border border-slate-700/80 px-3 py-1.5 rounded-xl">
-              <Database className="w-3.5 h-3.5 text-red-400" />
-              <span className="text-slate-300 font-medium">
-                Redis: <strong className="text-red-400">driver:location:{ORDER_ID}</strong>
-              </span>
-            </div>
-
-            {/* Simular Rota Button */}
-            <button
-              onClick={startSimulation}
-              className={`flex items-center gap-2 font-bold px-4 py-2 rounded-xl transition shadow-lg active:scale-95 ${
-                isSimulating
-                  ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-amber-500/30'
-                  : 'bg-orange-500 hover:bg-orange-600 text-white shadow-orange-500/30'
-              }`}
-            >
-              {isSimulating ? (
-                <>
-                  <span className="w-2 h-2 rounded-full bg-slate-950 animate-ping" />
-                  Pausar Simulação GPS
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4 fill-current" />
-                  Simular Rota do Entregador
-                </>
-              )}
-            </button>
+        {/* Status de Conexão WebSocket */}
+        <div className="flex justify-center mb-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs">
+            <div className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+            {connected ? 'Sistemas Conectados (WebSocket)' : 'Desconectado'}
           </div>
         </div>
-      </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
-        {/* Stepper de Status do Pedido */}
-        <StatusStepper currentStatus={orderStatus} onAdvanceStatus={advanceOrderStatus} />
-
-        {/* Grid Principal: Mapa e Resumo */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Coluna Esquerda: Mapa e Controles (8 colunas) */}
-          <div className="lg:col-span-8 space-y-4">
-            {/* Mapa Interativo */}
-            <MapTracker
+        {/* View */}
+        <main>
+          {currentRole === 'CUSTOMER' && (
+            <CustomerView
+              socketConnected={connected}
+              orderStatus={orders.find(o => o.id === currentOrderId)?.status || null}
               driverLocation={driverLocation}
-              restaurantLocation={RESTAURANT_COORDS}
-              customerLocation={CUSTOMER_COORDS}
-              orderStatus={orderStatus}
+              restaurantLocation={RESTAURANT_LOC}
+              customerLocation={CUSTOMER_LOC}
+              onCreateOrder={handleCreateOrder}
+              isLoading={isLoading}
             />
+          )}
 
-            {/* Painel de Controles da Simulação */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 text-xs">
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={startSimulation}
-                  className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-white px-3.5 py-2 rounded-xl font-semibold border border-slate-700 transition"
-                >
-                  <Play className="w-3.5 h-3.5 text-orange-400" />
-                  {isSimulating ? 'Pausar' : 'Rodar Simulação'}
-                </button>
-                <button
-                  onClick={resetPosition}
-                  className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 px-3.5 py-2 rounded-xl font-semibold border border-slate-700 transition"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  Resetar Posição
-                </button>
-              </div>
+          {currentRole === 'RESTAURANT' && (
+            <RestaurantView
+              orders={orders}
+              onUpdateStatus={handleUpdateStatus}
+            />
+          )}
 
-              <div className="text-slate-400 font-mono">
-                Coordenadas Atuais:{' '}
-                <span className="text-orange-400 font-bold">
-                  {driverLocation ? `${driverLocation.lat.toFixed(5)}, ${driverLocation.lng.toFixed(5)}` : 'Aguardando...'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Coluna Direita: Detalhes do Pedido & Console (4 colunas) */}
-          <div className="lg:col-span-4 space-y-6">
-            {/* Card Detalhes do Pedido */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                <div className="flex items-center gap-2">
-                  <ShoppingBag className="w-4 h-4 text-orange-400" />
-                  <span className="font-extrabold text-sm text-white">Pedido #{ORDER_ID}</span>
-                </div>
-                <span className="text-[11px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold">
-                  Pago via PIX
-                </span>
-              </div>
-
-              <div className="py-4 space-y-3 text-xs">
-                <div className="flex justify-between text-slate-300">
-                  <span>1x Pizza Margherita Especial</span>
-                  <span className="font-bold text-white">R$ 54,90</span>
-                </div>
-                <div className="flex justify-between text-slate-300">
-                  <span>1x Guaraná Antarctica 2L</span>
-                  <span className="font-bold text-white">R$ 14,00</span>
-                </div>
-                <div className="pt-2 border-t border-slate-800 flex justify-between font-bold text-sm text-white">
-                  <span>Total</span>
-                  <span className="text-orange-400">R$ 68,90</span>
-                </div>
-              </div>
-
-              {/* Info do Entregador */}
-              <div className="mt-2 pt-3 border-t border-slate-800 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center text-orange-400 font-bold">
-                  CM
-                </div>
-                <div className="flex-1 text-xs">
-                  <div className="font-bold text-white">Carlos Mendes</div>
-                  <div className="text-slate-400">Honda CG 160 • Placa ABC-4E29</div>
-                </div>
-                <div className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-lg font-bold">
-                  4.9 ⭐
-                </div>
-              </div>
-            </div>
-
-            {/* Console de Telemetria WebSocket & Redis */}
-            <TelemetryLog logs={logs} onClearLogs={() => setLogs([])} />
-          </div>
-        </div>
-      </main>
+          {currentRole === 'DRIVER' && (
+            <DriverView
+              orders={orders}
+              onAcceptDelivery={handleAcceptDelivery}
+              onCompleteDelivery={handleCompleteDelivery}
+              driverLocation={driverLocation}
+              restaurantLocation={RESTAURANT_LOC}
+              customerLocation={CUSTOMER_LOC}
+            />
+          )}
+        </main>
+      </div>
     </div>
   );
 }
+
 export default App;

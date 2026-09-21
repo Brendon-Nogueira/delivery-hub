@@ -165,6 +165,15 @@ export class OrdersGateway
       updatedAt: new Date().toISOString(),
     });
 
+    // Broadcast para todos os clientes conectados (MVP sem rooms obrigatórias)
+    this.server.emit(WS_EVENTS.ORDER_STATUS_CHANGED, {
+      orderId: data.orderId,
+      status: data.status,
+      note: data.note,
+      updatedBy: client.data.user?.email,
+      updatedAt: new Date().toISOString(),
+    });
+
     this.logger.log(
       `Status: ${data.orderId} → ${data.status} (por ${client.data.user?.email})`,
     );
@@ -180,6 +189,8 @@ export class OrdersGateway
    */
   emitNewOrder(restaurantId: string, order: any) {
     this.server.to(`restaurant:${restaurantId}`).emit(WS_EVENTS.ORDER_NEW, order);
+    // Broadcast geral para o MVP
+    this.server.emit(WS_EVENTS.ORDER_NEW, order);
     this.logger.log(`Novo pedido emitido para restaurant:${restaurantId}`);
   }
 

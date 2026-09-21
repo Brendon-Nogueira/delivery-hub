@@ -20,14 +20,20 @@ O projeto encontra-se em estágio **funcional e demonstrável (MVP)**, com toda 
   - Baixíssima latência (~0.1ms por escrita), evitando sobrecarga no banco relacional.
 - [x] **Banco de Dados PostgreSQL 16 + Prisma ORM**:
   - Modelagem completa de Usuários, Roles (`CUSTOMER`, `RESTAURANT_OWNER`, `DRIVER`, `ADMIN`), Restaurantes, Itens do Cardápio, Pedidos e Histórico de Status.
-- [x] **Frontend React / Vite + TailwindCSS**:
-  - **Mapa Interativo (Leaflet)** centralizado em **Paraisópolis - MG** (Centro / Praça Cel. José Vieira até Bairro Residencial).
-  - Marcadores visuais customizados: Restaurante, Cliente e Entregador (com anéis de pulso de radar pulsante).
-  - **Cálculo dinâmico de Distância e Previsão (ETA)** em metros e minutos.
-  - **Alerta de Proximidade Inteligente**: Dispara banner dinâmico quando o entregador está a menos de 450m do endereço do cliente.
-  - **Stepper de Status**: Acompanhamento visual dos estágios do pedido.
-  - **Console de Telemetria ao Vivo**: Visualização em tempo real dos frames WebSocket recebidos e gravações no Redis.
-  - **Simulador de Rota Integrado**: Botão que dispara animação contínua da rota do entregador rua a rua.
+  - Script de Seed automatizado (`pnpm --filter @delivery-hub/api run db:seed`) com entidades mockadas para testes imediatos.
+- [x] **Frontend React / Vite + TailwindCSS — Módulo 1 (3 Atores / Painéis Dedicados)**:
+  - **Painel do Cliente (`CustomerView`)**: Criação de pedidos reais via REST (`POST /api/v1/orders`), stepper de status sincronizado via WebSocket e mapa de rastreamento com cálculo de ETA.
+  - **Painel do Restaurante / KDS (`RestaurantView`)**:
+    - Gestão visual em **Kanban** (`Novos`, `Preparando`, `Prontos`).
+    - **Alerta Sonoro via Web Audio API Nativa**: Sintetizador em tempo real (campainha 'Ding-Dong' ~880Hz e ~1175Hz) sem carregar arquivos pesados de terceiros.
+    - **Impressão Térmica ESC/POS (CSS `@media print`)**: Emissão de cupom não fiscal formatado para bobinas térmicas de 58mm/80mm com quebras de linha automáticas.
+  - **Painel do Entregador Mobile (`DriverView`)**:
+    - Visão mobile-first de despacho, aceite de entregas e botão de ação rápida para simulação contínua de GPS em Paraisópolis - MG.
+    - **Deep Links Gratuitos**: Redirecionamento com um clique para navegação curva a curva no **Waze** (`waze://`) e **Google Maps** (`geo:` / web).
+  - **Mapa Interativo (Leaflet)** centralizado em **Paraisópolis - MG**:
+    - Marcadores dinâmicos (Restaurante, Cliente e Moto com pulso radar).
+    - Cálculo de distância geodésica e alerta dinâmico de proximidade (< 450m).
+    - Console de Telemetria com visualização de pacotes WebSocket e cache Redis.
 
 ---
 
@@ -44,7 +50,10 @@ O projeto encontra-se em estágio **funcional e demonstrável (MVP)**, com toda 
 | **GraphQL (Apollo Server)** | Camada de Consulta Flexível | Utilizado para consultas flexíveis de catálogo de restaurantes e itens de cardápio, permitindo que clientes peçam exatamente os campos necessários sem *over-fetching*. |
 | **React 18 + Vite** | Frontend Library & Bundler | Vite oferece Hot Module Replacement (HMR) instantâneo em milissegundos. React gerencia os estados reativos do mapa, marcadores e conexões de socket de forma fluida. |
 | **TailwindCSS** | Estilização & Design System | Criação de interface moderna, responsiva, dark theme, sombras suaves e micro-animações sem a necessidade de arquivos CSS gigantescos e desorganizados. |
+| **Web Audio API (Nativo)** | Alertas Sonoros Gratuitos | Geração procedural de tons e beeps diretamente na GPU/CPU do navegador via `AudioContext` do JavaScript, sem custos de licença ou download de MP3. |
+| **CSS Print (@media print)** | Impressão Térmica ESC/POS | Estilização CSS especializada que formata os pedidos em cupons de 58mm/80mm prontos para qualquer impressora térmica de balcão (Epson, Bematech, Elgin, etc.). |
 | **Leaflet** | Biblioteca de Mapas | Renderização leve de mapas interativos via OpenStreetMap. Permite criar marcadores com HTML/SVG dinâmico (efeito radar da moto e pins personalizados) sem custos com Google Maps API. |
+| **Deep Links Mobile** | Navegação GPS Externa | Utilização dos esquemas de URL gratuitos do Waze e Google Maps para envio direto das coordenadas para o app instalado no celular do motoboy. |
 | **Docker & Docker Compose** | Infraestrutura e Containers | Sobe com um único comando os serviços essenciais de banco (**PostgreSQL 16**) e cache (**Redis 7**) de forma idêntica em qualquer máquina de desenvolvimento. |
 
 ---
@@ -62,7 +71,8 @@ delivery-hub/
 ├── apps/
 │   ├── api/                          # BACKEND NESTJS
 │   │   ├── prisma/
-│   │   │   └── schema.prisma         # Modelagem das tabelas do Postgres
+│   │   │   ├── schema.prisma         # Modelagem das tabelas do Postgres
+│   │   │   └── seed.ts               # Seed de dados iniciais (User, Restaurant, Driver, Item)
 │   │   ├── src/
 │   │   │   ├── auth/                 # Autenticação JWT, login, registro e Guards
 │   │   │   ├── common/
@@ -88,12 +98,16 @@ delivery-hub/
 │   └── web/                          # FRONTEND REACT (VITE)
 │       ├── src/
 │       │   ├── components/
+│       │   │   ├── views/
+│       │   │   │   ├── CustomerView.tsx    # Painel 1: Acompanhamento e criação de pedidos
+│       │   │   │   ├── RestaurantView.tsx  # Painel 2: KDS Kanban + Áudio Web + Impressão Térmica
+│       │   │   │   └── DriverView.tsx      # Painel 3: Cockpit Mobile + Deep Links Waze/Google Maps
 │       │   │   ├── MapTracker.tsx    # Mapa Leaflet com GPS animado e radar
 │       │   │   ├── StatusStepper.tsx # Linha do tempo dos status do pedido
 │       │   │   └── TelemetryLog.tsx  # Console visual de pacotes WS e Redis
-│       │   ├── App.tsx               # Dashboard principal do cliente (Paraisópolis MG)
+│       │   ├── App.tsx               # Switcher dos 3 Painéis + Hub de Simulação
 │       │   ├── main.tsx              # Ponto de entrada React DOM
-│       │   └── index.css             # Configurações do TailwindCSS e estilos do mapa
+│       │   └── index.css             # Configurações do TailwindCSS e estilos de impressão térmica
 │       ├── index.html                # HTML base com fontes e Leaflet CSS
 │       ├── tailwind.config.js        # Tokens de cores e extensões de design
 │       └── vite.config.ts            # Configurações do Vite e proxies
@@ -131,10 +145,12 @@ delivery-hub/
    pnpm install
    ```
 
-3. **Gere os schemas e migrações do Prisma**:
+3. **Gere os schemas no PostgreSQL e alimente os dados de teste (Seed)**:
    ```bash
    pnpm run db:push
+   pnpm --filter @delivery-hub/api run db:seed
    ```
+   > **Nota:** O comando `db:seed` cria os registros base necessários no banco (`user-123`, `rest-123`, `driver-123`, `item-1`) para permitir a criação imediata de pedidos sem necessidade de login.
 
 ---
 
@@ -163,7 +179,7 @@ Você pode iniciar o backend e o frontend simultaneamente ou em terminais separa
 
 | Serviço | URL | Descrição |
 | :--- | :--- | :--- |
-| **Painel Web do Cliente** | [http://localhost:3000](http://localhost:3000) | Dashboard interativo com mapa de Paraisópolis - MG e simulador |
+| **Painel Web Unificado** | [http://localhost:3000](http://localhost:3000) | Hub com alternador entre os 3 Atores (Cliente, Restaurante KDS e Entregador) |
 | **API REST** | [http://localhost:4000/api/v1](http://localhost:4000/api/v1) | Endpoints REST de autenticação, pedidos e telemetria |
 | **GraphQL Playground** | [http://localhost:4000/graphql](http://localhost:4000/graphql) | Interface interativa de queries e mutations GraphQL |
 | **WebSocket /delivery** | `ws://localhost:4000/delivery` | Canal em tempo real para streaming de coordenadas GPS |
@@ -171,8 +187,29 @@ Você pode iniciar o backend e o frontend simultaneamente ou em terminais separa
 
 ---
 
+## Os 3 Atores e Seus Recursos Dedicados
+
+Na interface em [http://localhost:3000](http://localhost:3000), você pode alternar facilmente entre os 3 atores no topo da página:
+
+1. **Visão do Cliente**:
+   - Botão para criar pedidos reais via REST (`POST /api/v1/orders`).
+   - Acompanhamento do status com progressão visual automática.
+   - Mapa ao vivo com rota e alerta de aproximação em Paraisópolis - MG.
+
+2. **Visão do Restaurante (KDS - Kitchen Display System)**:
+   - Quadro Kanban dividindo pedidos entre `Novos`, `Preparando` e `Prontos`.
+   - **Alerta Sonoro Nativo**: Toca campainha sintetizada quando um novo pedido entra.
+   - **Impressão Térmica**: Botão de impressão que aciona o layout ESC/POS CSS para cupom de balcão (58mm/80mm).
+
+3. **Visão do Entregador (Cockpit Mobile)**:
+   - Interface compacta pensada para smartphone de entregador.
+   - Botão de simulação rápida de telemetria GPS pela rota de Paraisópolis.
+   - Botões de **Deep Links** para abrir as coordenadas da entrega direto no **Waze** ou **Google Maps**.
+
+---
+
 ## Simulação de GPS (Paraisópolis - MG)
-Ao abrir a aplicação em [http://localhost:3000](http://localhost:3000), basta clicar no botão **"Simular Rota do Entregador"**:
-1. O backend/frontend dispara coordenadas interpoladas partindo do **Centro de Paraisópolis (Praça Cel. José Vieira)** em direção ao **Bairro Residencial**.
-2. Cada ponto atualiza a chave no **Redis** e emite broadcast via **WebSocket**.
-3. A moto se move suavemente no mapa com pulso de radar, recalcula a distância restante e aciona o alerta de aproximação ao chegar a menos de 450m do destino!
+1. Crie um pedido pelo **Painel do Cliente** ou clique em **"Simular Rota do Entregador"** em qualquer tela.
+2. O simulador dispara coordenadas interpoladas partindo do **Centro de Paraisópolis (Praça Cel. José Vieira)** em direção ao **Bairro Residencial**.
+3. Cada ponto atualiza a chave no **Redis** e emite broadcast via **WebSocket**.
+4. A moto se move suavemente no mapa com pulso de radar, recalcula a distância restante e aciona o alerta de aproximação ao chegar a menos de 450m do destino!

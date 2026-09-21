@@ -2,10 +2,10 @@ import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards } from '@ne
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { OrdersGateway } from './orders.gateway';
 import { OrderStatus } from '@delivery-hub/shared';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 /**
  * OrdersController — Endpoints REST para pedidos.
@@ -23,7 +23,6 @@ import { OrderStatus } from '@delivery-hub/shared';
  * - WebSocket: Notifica em tempo real (evento efêmero)
  */
 @Controller('orders')
-@UseGuards(JwtAuthGuard)
 export class OrdersController {
   constructor(
     private readonly ordersService: OrdersService,
@@ -32,12 +31,12 @@ export class OrdersController {
 
   @Post()
   async create(
-    @CurrentUser('userId') userId: string,
     @Body() dto: CreateOrderDto,
   ) {
+    // hardcoded para simular a criação do usuário
+    const userId = 'user-123';
 
     const order = await this.ordersService.create(userId, dto);
-
 
     this.ordersGateway.emitNewOrder(dto.restaurantId, order);
 
