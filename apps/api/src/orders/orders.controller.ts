@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
@@ -30,12 +30,11 @@ export class OrdersController {
   ) { }
 
   @Post()
+  @UseGuards(JwtAuthGuard)
   async create(
+    @CurrentUser('userId') userId: string,
     @Body() dto: CreateOrderDto,
   ) {
-    // hardcoded para simular a criação do usuário
-    const userId = 'user-123';
-
     const order = await this.ordersService.create(userId, dto);
 
     this.ordersGateway.emitNewOrder(dto.restaurantId, order);
@@ -44,6 +43,7 @@ export class OrdersController {
   }
 
   @Get('my')
+  @UseGuards(JwtAuthGuard)
   async getMyOrders(@CurrentUser('userId') userId: string) {
     return this.ordersService.findByCustomer(userId);
   }
@@ -54,6 +54,11 @@ export class OrdersController {
     @Query('status') status?: OrderStatus,
   ) {
     return this.ordersService.findByRestaurant(restaurantId, status);
+  }
+
+  @Delete('clear')
+  async clearOrders(@Query('restaurantId') restaurantId?: string) {
+    return this.ordersService.clearAllOrders(restaurantId);
   }
 
   @Get(':id')

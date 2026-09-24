@@ -231,4 +231,34 @@ export class OrdersService {
       totalRevenue: totalRevenueResult._sum.totalPrice?.toNumber() || 0,
     };
   }
+
+  async clearAllOrders(restaurantId?: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const whereClause = restaurantId ? { restaurantId } : {};
+      const orders = await tx.order.findMany({
+        where: whereClause,
+        select: { id: true },
+      });
+
+      const orderIds = orders.map((o) => o.id);
+
+      if (orderIds.length > 0) {
+        await tx.orderStatusHistory.deleteMany({
+          where: { orderId: { in: orderIds } },
+        });
+
+        await tx.orderItem.deleteMany({
+          where: { orderId: { in: orderIds } },
+        });
+
+        await tx.order.deleteMany({
+          where: { id: { in: orderIds } },
+        });
+      }
+
+      this.logger.log(`Limpeza concluída: ${orderIds.length} pedidos removidos`);
+      return { count: orderIds.length };
+    });
+  }
 }
+

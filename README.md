@@ -22,11 +22,25 @@ O projeto encontra-se em estágio **funcional e demonstrável (MVP)**, com toda 
   - Modelagem completa de Usuários, Roles (`CUSTOMER`, `RESTAURANT_OWNER`, `DRIVER`, `ADMIN`), Restaurantes, Itens do Cardápio, Pedidos e Histórico de Status.
   - Script de Seed automatizado (`pnpm --filter @delivery-hub/api run db:seed`) com entidades mockadas para testes imediatos.
 - [x] **Frontend React / Vite + TailwindCSS — Módulo 1 (3 Atores / Painéis Dedicados)**:
-  - **Painel do Cliente (`CustomerView`)**: Criação de pedidos reais via REST (`POST /api/v1/orders`), stepper de status sincronizado via WebSocket e mapa de rastreamento com cálculo de ETA.
+  - **Fase 1 Concluída — Autenticação Real (JWT + Context API)**:
+    - Estado global de autenticação com **React Context API** (`AuthContext.tsx`).
+    - Modal de login e cadastro (`AuthModal.tsx`) com alternador de perfil e botões de atalho de 1-clique para demonstração rápida (Cliente, Dono do Restaurante, Entregador).
+    - Barra de identificação do usuário logado (`UserHeader.tsx`) com badge de perfil, avatar e logout.
+    - Cliente HTTP centralizado (`api.ts`) que anexa automaticamente `Authorization: Bearer <token>` em todas as requisições REST e trata erros 401.
+    - Handshake autenticado nos WebSockets (`/orders` e `/delivery`) enviando o JWT token.
+    - Backend protegido: `POST /orders` e `GET /orders/my` utilizam `@UseGuards(JwtAuthGuard)` e decorator `@CurrentUser('userId')` para vincular pedidos ao usuário autenticado real.
+  - **Fase 2 Concluída — Cardápio Dinâmico & Carrinho de Compras**:
+    - Catálogo diversificado no banco PostgreSQL (11 itens categorizados entre *Pratos Feitos*, *Lanches & Porções*, *Bebidas* e *Sobremesas*).
+    - Componente visual de prato (`MenuItemCard.tsx`) com fotografia, badge temático, preço em BRL e controle interativo de quantidade `[-] Qtd [+]`.
+    - Filtro de categorias em abas deslizantes no topo do cardápio.
+    - Carrinho reativo com cálculo de subtotal, taxa de entrega (R$ 5,00) e total geral.
+    - Drawer/Modal de Checkout com campo para observações da cozinha e seleção de pagamento (PIX, Cartão ou Dinheiro).
+    - O KDS do restaurante (`RestaurantView.tsx`) e a Comanda Térmica agora exibem os itens reais selecionados pelo cliente com quantidades, preços e observações!
+  - **Painel do Cliente (`CustomerView`)**: Navegação fluida entre Cardápio/Carrinho e rastreamento em tempo real do pedido com mapa e cálculo de ETA.
   - **Painel do Restaurante / KDS (`RestaurantView`)**:
     - Gestão visual em **Kanban** (`Novos`, `Preparando`, `Prontos`).
-    - **Alerta Sonoro via Web Audio API Nativa**: Sintetizador em tempo real (campainha 'Ding-Dong' ~880Hz e ~1175Hz) sem carregar arquivos pesados de terceiros.
-    - **Impressão Térmica ESC/POS (CSS `@media print`)**: Emissão de cupom não fiscal formatado para bobinas térmicas de 58mm/80mm com quebras de linha automáticas.
+    - **Alerta Sonoro via Web Audio API Nativa**: Sintetizador em tempo real (campainha 'Ding-Dong' ~880Hz e ~1175Hz).
+    - **Impressão Térmica ESC/POS (CSS `@media print`)**: Emissão de cupom não fiscal formatado para bobinas térmicas com itens reais e nome do cliente.
   - **Painel do Entregador Mobile (`DriverView`)**:
     - Visão mobile-first de despacho, aceite de entregas e botão de ação rápida para simulação contínua de GPS em Paraisópolis - MG.
     - **Deep Links Gratuitos**: Redirecionamento com um clique para navegação curva a curva no **Waze** (`waze://`) e **Google Maps** (`geo:` / web).

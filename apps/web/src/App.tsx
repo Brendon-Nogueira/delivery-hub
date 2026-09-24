@@ -2,61 +2,72 @@ import React, { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { RoleNavigation, Role } from './components/RoleNavigation';
 import { CustomerView } from './views/CustomerView';
-import { RestaurantView } from './views/RestaurantView';
+import { RestaurantView, Order as RestaurantOrder } from './views/RestaurantView';
 import { DriverView } from './views/DriverView';
 import { audioSynth } from './utils/audio';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { UserHeader } from './components/UserHeader';
+import { apiFetch, API_BASE_URL } from './utils/api';
 
 type OrderStatus = 'PENDING' | 'PREPARING' | 'READY' | 'ON_THE_WAY' | 'DELIVERED';
 
-interface Order {
-  id: string;
-  status: OrderStatus;
-  createdAt: string;
-}
-
-const API_URL = 'http://localhost:4000';
-
-function App() {
+function AppContent() {
+  const { user, token, isAuthenticated, quickLogin } = useAuth();
   const [currentRole, setCurrentRole] = useState<Role>('CUSTOMER');
-  
+
   // Sockets
   const [ordersSocket, setOrdersSocket] = useState<Socket | null>(null);
   const [deliverySocket, setDeliverySocket] = useState<Socket | null>(null);
   const [connected, setConnected] = useState(false);
-  
- 
-  const [orders, setOrders] = useState<Order[]>([]);
+
+  // Pedidos e Telemetria
+  const [orders, setOrders] = useState<RestaurantOrder[]>([]);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
-  const [driverLocation, setDriverLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [driverLocation, setDriverLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Coordenadas fixas (Paraisópolis - MG)
-  const RESTAURANT_LOC = { lat: -22.553800, lng: -45.779600 }; // Praça Cel. José Vieira
-  const CUSTOMER_LOC = { lat: -22.548000, lng: -45.775000 }; // Um pouco afastado do centro
+  const RESTAURANT_LOC = { lat: -22.5538, lng: -45.7796 }; // Praça Cel. José Vieira
+  const CUSTOMER_LOC = { lat: -22.548, lng: -45.775 }; // Bairro residencial
 
-  //Carrega pedidos existentes 
+  
   useEffect(() => {
-    fetch(`${API_URL}/api/v1/orders/restaurant/rest-123`)
-      .then(res => res.ok ? res.json() : [])
-      .then((data: any[]) => {
+    if (user) {
+      if (user.role === 'RESTAURANT_OWNER') {
+        setCurrentRole('RESTAURANT');
+      } else if (user.role === 'DRIVER') {
+        setCurrentRole('DRIVER');
+      } else if (user.role === 'CUSTOMER') {
+        setCurrentRole('CUSTOMER');
+      }
+    }
+  }, [user]);
+
+  
+  useEffect(() => {
+    apiFetch<any[]>('/api/v1/orders/restaurant/rest-123')
+      .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
-          const loaded: Order[] = data.map(d => ({
+          const loaded: RestaurantOrder[] = data.map((d) => ({
             id: d.id,
             status: d.status as OrderStatus,
-            createdAt: d.createdAt
+            createdAt: d.createdAt,
+            totalPrice: d.totalPrice,
+            notes: d.notes,
+            customer: d.customer,
+            items: d.items,
           }));
           setOrders(loaded);
-          // Se não houver pedido ativo selecionado, seleciona o mais recente
-          setCurrentOrderId(prev => prev || loaded[0].id);
         }
       })
-      .catch(err => console.log('Histórico inicial:', err));
+      .catch((err) => console.log('Histórico inicial:', err));
   }, []);
 
+  // Conexão e sincronização com WebSocket (autenticado com JWT via token)
   useEffect(() => {
-    // Conecta nos dois namespaces
-    const ordSocket = io(`${API_URL}/orders`);
-    const dlvSocket = io(`${API_URL}/delivery`);
+    const socketOptions = token ? { auth: { token } } : {};
+    const ordSocket = io(`${API_BASE_URL}/orders`, socketOptions);
+    const dlvSocket = io(`${API_BASE_URL}/delivery`, socketOptions);
 
     setOrdersSocket(ordSocket);
     setDeliverySocket(dlvSocket);
@@ -68,28 +79,38 @@ function App() {
         ordSocket.emit('joinOrderRoom', { orderId: currentOrderId });
       }
     });
+
     ordSocket.on('disconnect', () => setConnected(false));
 
-    // Escuta evento emitido pelo OrdersGateway
+    
     const handleNewOrder = (order: any) => {
-      const formattedOrder: Order = {
+      const formattedOrder: RestaurantOrder = {
         id: order.id,
         status: order.status || 'PENDING',
-        createdAt: order.createdAt || new Date().toISOString()
+        createdAt: order.createdAt || new Date().toISOString(),
+        totalPrice: order.totalPrice,
+        notes: order.notes,
+        customer: order.customer,
+        items: order.items,
       };
-      setOrders(prev => {
-        if (prev.some(o => o.id === formattedOrder.id)) return prev;
+
+      setOrders((prev) => {
+        if (prev.some((o) => o.id === formattedOrder.id)) return prev;
         return [formattedOrder, ...prev];
       });
-      setCurrentOrderId(prev => prev || formattedOrder.id);
+
+      
+      setCurrentOrderId((prev) => prev || formattedOrder.id);
     };
 
     ordSocket.on('newOrder', handleNewOrder);
     ordSocket.on('orderCreated', handleNewOrder);
 
-    // Escuta atualização de status
-    const handleStatusChanged = (data: { orderId: string, status: OrderStatus }) => {
-      setOrders(prev => prev.map(o => o.id === data.orderId ? { ...o, status: data.status } : o));
+    
+    const handleStatusChanged = (data: { orderId: string; status: OrderStatus }) => {
+      setOrders((prev) =>
+        prev.map((o) => (o.id === data.orderId ? { ...o, status: data.status } : o))
+      );
       if (data.status !== 'PENDING') {
         audioSynth.playSuccessSound();
       }
@@ -115,68 +136,69 @@ function App() {
       ordSocket.disconnect();
       dlvSocket.disconnect();
     };
-  }, [currentOrderId]);
+  }, [token, currentOrderId]);
 
-  // Ações do Cliente
-  const handleCreateOrder = async () => {
+  
+  const handleCreateOrder = async (
+    items: Array<{ menuItemId: string; quantity: number }>,
+    notes?: string
+  ) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/v1/orders`, { 
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          restaurantId: 'rest-123',
-          items: [
-            { menuItemId: 'item-1', quantity: 1 }
-          ],
-          notes: 'Pedido Teste MVP'
-        })
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
       
-      const newOrder: Order = {
+      if (!isAuthenticated) {
+        await quickLogin('CUSTOMER');
+      }
+
+      const data = await apiFetch<any>('/api/v1/orders', {
+        method: 'POST',
+        data: {
+          restaurantId: 'rest-123',
+          items,
+          notes,
+        },
+      });
+
+      const newOrder: RestaurantOrder = {
         id: data.id,
         status: data.status || 'PENDING',
-        createdAt: data.createdAt || new Date().toISOString()
+        createdAt: data.createdAt || new Date().toISOString(),
+        totalPrice: data.totalPrice,
+        notes: data.notes,
+        customer: data.customer || (user ? { id: user.id, name: user.name, phone: user.phone } : undefined),
+        items: data.items,
       };
 
-      // Atualiza o estado local imediatamente para a tela avançar
-      setOrders(prev => [newOrder, ...prev.filter(o => o.id !== newOrder.id)]);
+      setOrders((prev) => [newOrder, ...prev.filter((o) => o.id !== newOrder.id)]);
       setCurrentOrderId(data.id);
 
-      // Entra na sala do pedido nos sockets
+      // Entra nas salas do pedido nos sockets
       ordersSocket?.emit('joinOrderRoom', { orderId: data.id });
       deliverySocket?.emit('joinDeliveryRoom', { orderId: data.id });
 
       audioSynth.playSuccessSound();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao criar pedido:', error);
-      alert('Erro ao criar pedido. Verifique a conexão com o backend.');
+      alert(`Erro ao criar pedido: ${error.message || 'Verifique a conexão com o backend'}`);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Ações do Restaurante
+ 
   const handleUpdateStatus = (orderId: string, status: OrderStatus) => {
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
+    setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)));
     if (ordersSocket) {
       ordersSocket.emit('updateOrderStatus', { orderId, status });
     }
   };
 
-  // Ações do Entregador
+  
   const handleAcceptDelivery = async (orderId: string) => {
     handleUpdateStatus(orderId, 'ON_THE_WAY');
-    
-    // simulação de rota no backend
+
     try {
-      await fetch(`${API_URL}/api/v1/delivery/simulate-trip/${orderId}`, { method: 'POST' });
+      await apiFetch(`/api/v1/delivery/simulate-trip/${orderId}`, { method: 'POST' });
     } catch (error) {
       console.error('Erro ao iniciar simulação de entrega', error);
     }
@@ -188,44 +210,63 @@ function App() {
     audioSynth.playSuccessSound();
   };
 
-  const pendingCount = orders.filter(o => o.status === 'PENDING').length;
+  const handleClearOrders = async () => {
+    if (window.confirm('Deseja limpar todos os pedidos da fila do KDS?')) {
+      try {
+        await apiFetch('/api/v1/orders/clear', { method: 'DELETE' });
+        setOrders([]);
+        setCurrentOrderId(null);
+      } catch (error: any) {
+        console.error('Erro ao limpar pedidos:', error);
+      }
+    }
+  };
+
+  const pendingCount = orders.filter((o) => o.status === 'PENDING').length;
+  const activeCustomerOrder = orders.find((o) => o.id === currentOrderId);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8 font-sans">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 p-3 md:p-6 font-sans antialiased selection:bg-red-500 selection:text-white">
       <div className="max-w-6xl mx-auto">
-        <header className="mb-8 text-center">
-          <h1 className="text-4xl font-black bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent mb-2">
-            DeliveryHub MVP
-          </h1>
-          <p className="text-slate-400 mb-6">Plataforma Real-Time • Paraisópolis, MG</p>
-          
-          {/* Navegação */}
-          <RoleNavigation 
-            currentRole={currentRole} 
-            onChangeRole={setCurrentRole} 
+        {/* Barra Usuário */}
+        <UserHeader />
+
+      
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-6">
+          <RoleNavigation
+            currentRole={currentRole}
+            onChangeRole={setCurrentRole}
             pendingOrdersCount={pendingCount}
           />
-        </header>
 
-        {/* Status de Conexão WebSocket */}
-        <div className="flex justify-center mb-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs">
-            <div className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-            {connected ? 'Sistemas Conectados (WebSocket)' : 'Desconectado'}
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-[11px] text-zinc-400">
+            <span
+              className={`w-2 h-2 rounded-full ${
+                connected ? 'bg-emerald-500' : 'bg-red-500'
+              }`}
+            />
+            <span>{connected ? 'Tempo Real Ativo' : 'Offline'}</span>
+            {user && (
+              <span className="text-zinc-500 hidden md:inline">
+                • {user.name.split(' ')[0]}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* View */}
+        {/* View*/}
         <main>
           {currentRole === 'CUSTOMER' && (
             <CustomerView
               socketConnected={connected}
-              orderStatus={orders.find(o => o.id === currentOrderId)?.status || null}
+              orderStatus={activeCustomerOrder?.status || null}
+              activeOrder={activeCustomerOrder}
               driverLocation={driverLocation}
               restaurantLocation={RESTAURANT_LOC}
               customerLocation={CUSTOMER_LOC}
               onCreateOrder={handleCreateOrder}
               isLoading={isLoading}
+              onResetOrder={() => setCurrentOrderId(null)}
             />
           )}
 
@@ -233,6 +274,7 @@ function App() {
             <RestaurantView
               orders={orders}
               onUpdateStatus={handleUpdateStatus}
+              onClearOrders={handleClearOrders}
             />
           )}
 
@@ -252,4 +294,10 @@ function App() {
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}

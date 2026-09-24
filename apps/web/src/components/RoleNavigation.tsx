@@ -9,58 +9,55 @@ interface RoleNavigationProps {
   pendingOrdersCount?: number;
 }
 
-export const RoleNavigation: React.FC<RoleNavigationProps> = ({ 
-  currentRole, 
+export const RoleNavigation: React.FC<RoleNavigationProps> = ({
+  currentRole,
   onChangeRole,
-  pendingOrdersCount = 0
+  pendingOrdersCount = 0,
 }) => {
   return (
-    <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
+    <nav className="inline-flex items-center p-1 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-md">
       <button
         onClick={() => onChangeRole('CUSTOMER')}
-        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
           currentRole === 'CUSTOMER'
-            ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/30 scale-105'
-            : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
+            ? 'bg-zinc-800 text-white shadow-sm border border-zinc-700/80'
+            : 'text-zinc-400 hover:text-white hover:bg-zinc-850'
         }`}
       >
-        <ShoppingBag className="w-5 h-5" />
+        <ShoppingBag className={`w-4 h-4 ${currentRole === 'CUSTOMER' ? 'text-red-500' : 'text-zinc-500'}`} />
         <span>Cliente (App)</span>
       </button>
 
       <button
         onClick={() => onChangeRole('RESTAURANT')}
-        className={`relative flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+        className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
           currentRole === 'RESTAURANT'
-            ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/30 scale-105'
-            : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
+            ? 'bg-zinc-800 text-white shadow-sm border border-zinc-700/80'
+            : 'text-zinc-400 hover:text-white hover:bg-zinc-850'
         }`}
       >
-        <ChefHat className="w-5 h-5" />
+        <ChefHat className={`w-4 h-4 ${currentRole === 'RESTAURANT' ? 'text-amber-500' : 'text-zinc-500'}`} />
         <span>Restaurante (KDS)</span>
-        
-        {/* Badge de Novos Pedidos */}
+
+        {/* Badge */}
         {pendingOrdersCount > 0 && (
-          <span className="absolute -top-2 -right-2 flex h-5 w-5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-5 w-5 bg-red-500 text-white text-[10px] items-center justify-center font-bold">
-              {pendingOrdersCount}
-            </span>
+          <span className="flex h-4 min-w-4 px-1 rounded-full bg-red-600 text-white text-[10px] items-center justify-center font-bold">
+            {pendingOrdersCount}
           </span>
         )}
       </button>
 
       <button
         onClick={() => onChangeRole('DRIVER')}
-        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
           currentRole === 'DRIVER'
-            ? 'bg-orange-500 text-slate-950 shadow-lg shadow-orange-500/30 scale-105'
-            : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
+            ? 'bg-zinc-800 text-white shadow-sm border border-zinc-700/80'
+            : 'text-zinc-400 hover:text-white hover:bg-zinc-850'
         }`}
       >
-        <Bike className="w-5 h-5" />
+        <Bike className={`w-4 h-4 ${currentRole === 'DRIVER' ? 'text-orange-400' : 'text-zinc-500'}`} />
         <span>Entregador (Mobile)</span>
       </button>
-    </div>
+    </nav>
   );
 };
