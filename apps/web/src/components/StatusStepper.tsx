@@ -20,13 +20,13 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({ currentStatus, onA
   const activeIndex = currentIndex >= 0 ? currentIndex : 0;
 
   return (
-    <div className="bg-slate-900 border border-slate-800/90 rounded-2xl p-6 shadow-xl">
+    <div className="bg-zinc-900/90 backdrop-blur-md border border-zinc-800/80 rounded-2xl p-6 shadow-card-dark">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-sm uppercase tracking-wider text-slate-400 font-bold">
+          <h3 className="text-xs uppercase tracking-wider text-zinc-400 font-bold">
             Status do Pedido em Tempo Real
           </h3>
-          <p className="text-xl font-extrabold text-white mt-0.5">
+          <p className="text-xl font-black text-white mt-0.5 tracking-tight">
             {ORDER_STAGES[activeIndex]?.label ?? currentStatus}
           </p>
         </div>
@@ -34,7 +34,7 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({ currentStatus, onA
         {onAdvanceStatus && activeIndex < ORDER_STAGES.length - 1 && (
           <button
             onClick={onAdvanceStatus}
-            className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-slate-950 font-bold px-3.5 py-1.5 rounded-xl text-xs transition shadow-lg shadow-orange-500/20 active:scale-95"
+            className="flex items-center gap-2 bg-gradient-to-r from-brand-600 to-amber-500 hover:from-brand-500 hover:to-amber-400 text-white font-black px-4 py-2 rounded-xl text-xs transition shadow-brand-glow active:scale-95"
           >
             Avançar Status ➔
           </button>
@@ -44,9 +44,9 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({ currentStatus, onA
       {/* Grid horizontal de passos */}
       <div className="relative flex items-center justify-between">
         {/* Barra de progresso ao fundo */}
-        <div className="absolute top-5 left-4 right-4 h-1 bg-slate-800 -z-0">
+        <div className="absolute top-5 left-4 right-4 h-1 bg-zinc-800 -z-0 rounded-full">
           <div
-            className="h-full bg-gradient-to-r from-orange-500 via-amber-400 to-emerald-400 transition-all duration-500 rounded-full"
+            className="h-full bg-gradient-to-r from-brand-500 via-amber-400 to-emerald-400 transition-all duration-500 rounded-full"
             style={{ width: `${(activeIndex / (ORDER_STAGES.length - 1)) * 100}%` }}
           />
         </div>
@@ -61,22 +61,22 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({ currentStatus, onA
               <div
                 className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-300 ${
                   isCurrent
-                    ? 'bg-orange-500 text-slate-950 font-bold ring-4 ring-orange-500/30 shadow-lg shadow-orange-500/40 scale-110'
+                    ? 'bg-gradient-to-tr from-brand-600 to-amber-500 text-white font-black ring-4 ring-brand-500/30 shadow-brand-glow scale-110'
                     : isCompleted
-                    ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                    : 'bg-slate-800 text-slate-500 border border-slate-700'
+                    ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
+                    : 'bg-zinc-800 text-zinc-500 border border-zinc-700/80'
                 }`}
               >
-                <Icon className="w-5 h-5" />
+                <Icon className="w-5 h-5 stroke-[2.5]" />
               </div>
               <span
                 className={`text-[11px] font-bold mt-2.5 whitespace-nowrap ${
-                  isCurrent ? 'text-orange-400' : isCompleted ? 'text-slate-200' : 'text-slate-500'
+                  isCurrent ? 'text-brand-400' : isCompleted ? 'text-zinc-200' : 'text-zinc-500'
                 }`}
               >
                 {stage.label}
               </span>
-              <span className="hidden md:block text-[9px] text-slate-500 text-center max-w-[80px]">
+              <span className="hidden md:block text-[9px] text-zinc-500 text-center max-w-[80px]">
                 {stage.desc}
               </span>
             </div>

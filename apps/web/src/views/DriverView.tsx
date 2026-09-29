@@ -32,65 +32,72 @@ export const DriverView: React.FC<DriverViewProps> = ({
   const activeDelivery = orders.find(o => o.status === 'ON_THE_WAY');
 
   const handleOpenWaze = (lat: number, lng: number) => {
-    
     const url = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
     window.open(url, '_blank');
   };
 
   const handleOpenGoogleMaps = (lat: number, lng: number) => {
-    
     const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
     window.open(url, '_blank');
   };
 
   return (
-    <div className="max-w-md mx-auto w-full min-h-[calc(100vh-180px)] bg-slate-900 rounded-3xl overflow-hidden border-4 border-slate-800 shadow-2xl relative flex flex-col">
-      {/* "Status bar"*/}
-      <div className="bg-slate-950 px-6 py-2 flex justify-between items-center text-xs text-slate-400 font-medium z-10 relative">
-        <span>12:00</span>
-        <div className="flex items-center gap-2">
-          <span>5G</span>
-          <div className="w-5 h-3 bg-white rounded-sm"></div>
+    <div className="max-w-md mx-auto w-full min-h-[calc(100vh-170px)] bg-white rounded-[2.5rem] overflow-hidden border-4 border-zinc-200 shadow-drawer relative flex flex-col">
+      {/* Dynamic Island / Status Bar */}
+      <div className="bg-zinc-900 px-7 py-3 flex justify-between items-center text-xs text-zinc-400 font-semibold z-10 relative">
+        <span className="text-white">12:00</span>
+        <div className="w-20 h-4 bg-zinc-800 rounded-full border border-zinc-700 flex items-center justify-center">
+          <div className="w-2 h-2 rounded-full bg-zinc-600 mr-2" />
+          <div className="w-1.5 h-1.5 rounded-full bg-blue-500/70" />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] font-bold text-white">5G</span>
+          <div className="w-5 h-2.5 bg-white rounded-sm p-0.5 flex items-center">
+            <div className="w-full h-full bg-zinc-900 rounded-xs" />
+          </div>
         </div>
       </div>
 
-      {/* Header do App */}
-      <div className="bg-orange-500 p-4 pt-6 rounded-b-3xl shadow-lg relative z-10">
-        <div className="flex justify-between items-center text-slate-950">
+      {/* Header do App Driver */}
+      <div className="bg-gradient-to-r from-brand-600 via-brand-500 to-amber-500 p-5 pt-4 rounded-b-3xl shadow-lg relative z-10">
+        <div className="flex justify-between items-center text-white">
           <div>
-            <h2 className="font-black text-xl flex items-center gap-2">
-              <Bike className="w-6 h-6" />
-              Driver App
-            </h2>
-            <p className="text-orange-950 font-medium text-sm">Online • Paraisópolis, MG</p>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+                <Bike className="w-5 h-5 text-white" />
+              </div>
+              <h2 className="font-black text-xl tracking-tight">Driver App</h2>
+            </div>
+            <p className="text-white/80 font-medium text-xs mt-1">Online • Paraisópolis, MG</p>
           </div>
-          <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm">
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+
+          <div className="flex items-center gap-2 bg-black/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400"></span>
             </span>
+            <span className="text-xs font-black text-emerald-300">DISPONÍVEL</span>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto bg-slate-900 custom-scrollbar p-4 relative z-0">
-        
+      <div className="flex-1 overflow-y-auto bg-zinc-50 p-4 relative z-0">
         {activeDelivery ? (
-          /* trajeto ativo*/
+          /* Trajeto Ativo */
           <div className="space-y-4">
-            <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700 shadow-lg">
+            <div className="bg-white rounded-2xl p-4 border border-zinc-200/60 shadow-card">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
-                  <Navigation2 className="w-5 h-5 text-orange-500" />
+                <div className="w-10 h-10 rounded-xl bg-brand-50 border border-brand-200 flex items-center justify-center">
+                  <Navigation2 className="w-5 h-5 text-brand-500" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-white text-lg">Entrega em andamento</h3>
-                  <p className="text-slate-400 text-sm">Pedido #{activeDelivery.id.split('-')[0]}</p>
+                  <h3 className="font-extrabold text-zinc-900 text-base">Entrega em Andamento</h3>
+                  <p className="text-zinc-400 text-xs font-mono">Pedido #{activeDelivery.id.split('-')[0]}</p>
                 </div>
               </div>
 
-              {/* Mapa*/}
-              <div className="h-48 rounded-xl overflow-hidden mb-4 border border-slate-700">
+              {/* Mapa */}
+              <div className="h-52 rounded-xl overflow-hidden mb-4 border border-zinc-200 shadow-sm">
                 <MapTracker
                   restaurantLocation={restaurantLocation}
                   customerLocation={customerLocation}
@@ -99,86 +106,94 @@ export const DriverView: React.FC<DriverViewProps> = ({
                 />
               </div>
 
-              {/*(Deep Links)*/}
-              <div className="grid grid-cols-2 gap-3 mb-4">
+              {/* Deep Links GPS */}
+              <div className="grid grid-cols-2 gap-2.5 mb-4">
                 <button 
                   onClick={() => handleOpenWaze(customerLocation.lat, customerLocation.lng)}
-                  className="bg-blue-600/20 text-blue-400 border border-blue-600/30 font-medium py-2 rounded-xl flex items-center justify-center gap-2 hover:bg-blue-600/30 transition-colors"
+                  className="bg-sky-50 text-sky-700 border border-sky-200 font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 hover:bg-sky-100 transition active:scale-95 text-xs"
                 >
                   <Navigation className="w-4 h-4" />
-                  Waze
+                  Abrir no Waze
                 </button>
                 <button 
                   onClick={() => handleOpenGoogleMaps(customerLocation.lat, customerLocation.lng)}
-                  className="bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 font-medium py-2 rounded-xl flex items-center justify-center gap-2 hover:bg-emerald-600/30 transition-colors"
+                  className="bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 hover:bg-emerald-100 transition active:scale-95 text-xs"
                 >
                   <Map className="w-4 h-4" />
-                  G. Maps
+                  Google Maps
                 </button>
               </div>
 
-              <div className="bg-slate-900 rounded-xl p-3 mb-4">
-                <p className="text-xs text-slate-500 font-medium mb-1">ENDEREÇO DO CLIENTE</p>
-                <p className="text-white font-medium">Rua do Cliente, 123</p>
-                <p className="text-slate-400 text-sm">Centro, Paraisópolis - MG</p>
+              <div className="bg-zinc-50 rounded-xl p-3 mb-4 border border-zinc-200/60">
+                <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mb-0.5">Endereço de Entrega</p>
+                <p className="text-zinc-900 font-bold text-xs">Rua do Cliente, 123</p>
+                <p className="text-zinc-500 text-xs">Centro, Paraisópolis - MG</p>
               </div>
 
               <button 
                 onClick={() => onCompleteDelivery(activeDelivery.id)}
-                className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-lg shadow-emerald-500/20"
+                className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-black py-4 rounded-xl flex items-center justify-center gap-2 transition active:scale-95 shadow-lg shadow-emerald-600/30 text-sm"
               >
-                <CheckCircle className="w-5 h-5" />
+                <CheckCircle className="w-5 h-5 stroke-[2.5]" />
                 Finalizar Entrega
               </button>
             </div>
           </div>
         ) : (
-          /* buscando entregas */
+          /* Buscando Entregas */
           <div className="space-y-4">
-            <h3 className="font-bold text-slate-300 text-lg px-2">Corridas Disponíveis</h3>
+            <div className="flex items-center justify-between px-1">
+              <h3 className="font-extrabold text-zinc-800 text-base">Corridas Disponíveis</h3>
+              <span className="text-xs font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full border border-brand-200">
+                {availableDeliveries.length} pronta(s)
+              </span>
+            </div>
             
             {availableDeliveries.length === 0 ? (
-              <div className="text-center py-12 flex flex-col items-center">
-                <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-4 relative">
-                  <div className="absolute inset-0 rounded-full border-2 border-orange-500/30 animate-ping"></div>
-                  <Navigation2 className="w-6 h-6 text-orange-500" />
+              <div className="text-center py-16 flex flex-col items-center">
+                <div className="w-16 h-16 rounded-full bg-zinc-100 flex items-center justify-center mb-4 relative">
+                  <div className="absolute inset-0 rounded-full border-2 border-brand-300 animate-ping"></div>
+                  <Navigation2 className="w-6 h-6 text-brand-500 animate-spin" />
                 </div>
-                <p className="text-slate-400 font-medium">Procurando restaurantes próximos...</p>
+                <p className="text-zinc-700 font-bold text-sm">Procurando corridas...</p>
+                <p className="text-zinc-400 text-xs mt-1">Você será alertado quando um restaurante finalizar um pedido</p>
               </div>
             ) : (
               availableDeliveries.map(order => (
-                <div key={order.id} className="bg-slate-800 rounded-2xl p-4 border border-slate-700 shadow-lg relative overflow-hidden">
-                  {/* Detalhe visual laranja */}
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500"></div>
+                <div key={order.id} className="bg-white rounded-2xl p-4 border border-zinc-200/60 shadow-card relative overflow-hidden transition-all hover:border-zinc-300 hover:shadow-card-hover">
+                  {/* Faixa lateral decorativa */}
+                  <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-brand-500 to-amber-500"></div>
                   
                   <div className="flex justify-between items-start mb-3 pl-2">
                     <div>
-                      <span className="bg-slate-700 text-slate-300 text-xs px-2 py-1 rounded font-medium">Restaurante Paraisópolis</span>
-                      <h4 className="font-bold text-white mt-2 text-lg">Retirada • #{order.id.split('-')[0]}</h4>
+                      <span className="bg-zinc-100 text-zinc-600 text-[10px] font-bold px-2 py-0.5 rounded-md border border-zinc-200">
+                        Restaurante Paraisópolis
+                      </span>
+                      <h4 className="font-black text-zinc-900 mt-1.5 text-base">Retirada • #{order.id.split('-')[0]}</h4>
                     </div>
                     <div className="text-right">
-                      <span className="text-green-400 font-bold text-lg">R$ 6,50</span>
-                      <p className="text-slate-500 text-xs mt-1">2.4 km total</p>
+                      <span className="text-emerald-600 font-black text-lg">R$ 6,50</span>
+                      <p className="text-zinc-400 text-[11px] font-medium mt-0.5">2.4 km total</p>
                     </div>
                   </div>
                   
-                  <div className="pl-2 flex items-center gap-3 text-sm text-slate-400 mb-4">
+                  <div className="pl-2 flex items-center gap-3 text-xs text-zinc-500 mb-4 bg-zinc-50 p-2.5 rounded-xl border border-zinc-200/60">
                     <div className="flex flex-col items-center gap-1">
-                      <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                      <div className="w-0.5 h-6 bg-slate-700"></div>
-                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                      <div className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm"></div>
+                      <div className="w-0.5 h-5 bg-zinc-200"></div>
+                      <div className="w-2.5 h-2.5 rounded-full bg-brand-500 shadow-sm"></div>
                     </div>
-                    <div>
-                      <p className="mb-2">Praça Cel. José Vieira (Restaurante)</p>
-                      <p>Rua do Cliente, 123 (Entrega)</p>
+                    <div className="leading-tight">
+                      <p className="mb-2 font-medium text-zinc-700">Praça Cel. José Vieira (Restaurante)</p>
+                      <p className="font-medium text-zinc-700">Rua do Cliente, 123 (Entrega)</p>
                     </div>
                   </div>
 
                   <button 
                     onClick={() => onAcceptDelivery(order.id)}
-                    className="w-full bg-orange-500 hover:bg-orange-400 text-slate-950 font-bold py-3 rounded-xl transition-transform active:scale-95 shadow-lg shadow-orange-500/20"
+                    className="w-full bg-gradient-to-r from-brand-600 via-brand-500 to-amber-500 hover:from-brand-500 hover:to-amber-500 text-white font-black py-3 rounded-xl transition active:scale-95 shadow-brand-glow text-xs"
                   >
-                    Aceitar Corrida
+                    Aceitar Corrida • R$ 6,50
                   </button>
                 </div>
               ))
@@ -187,9 +202,9 @@ export const DriverView: React.FC<DriverViewProps> = ({
         )}
       </div>
 
-      {/* fake do iOS */}
-      <div className="bg-slate-900 pt-2 pb-1 flex justify-center">
-        <div className="w-1/3 h-1 bg-slate-700 rounded-full"></div>
+      {/* Barra Home do Smartphone */}
+      <div className="bg-zinc-900 pt-2 pb-2 flex justify-center">
+        <div className="w-1/3 h-1 bg-zinc-600 rounded-full"></div>
       </div>
     </div>
   );

@@ -20,7 +20,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
   const [error, setError] = useState<string | null>(null);
 
-  // Form states
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -73,14 +73,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       {/* Backdrop */}
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
       />
 
-      <div className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 shadow-2xl text-zinc-100 z-10">
+      <div className="relative w-full max-w-md bg-white border border-zinc-200 rounded-3xl p-6 md:p-8 shadow-drawer text-zinc-900 z-10">
         {/* Botão Fechar */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+          className="absolute top-5 right-5 p-2 rounded-xl text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
           title="Fechar"
         >
           <X className="w-5 h-5" />
@@ -88,21 +88,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         {/* Título & Ícone */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-red-600/10 text-red-500 mb-3 border border-red-500/20">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-brand-50 text-brand-500 mb-3 border border-brand-200 shadow-brand-glow">
             {mode === 'login' ? <LogIn className="w-6 h-6" /> : <UserPlus className="w-6 h-6" />}
           </div>
-          <h2 className="text-2xl font-black text-white tracking-tight">
+          <h2 className="text-2xl font-black text-zinc-900 tracking-tight">
             {mode === 'login' ? 'Acesse sua Conta' : 'Criar nova Conta'}
           </h2>
           <p className="text-xs text-zinc-400 mt-1">
             {mode === 'login'
-              ? 'Faça login para acompanhar e realizar seus pedidos'
-              : 'Cadastre-se para aproveitar o DeliveryHub'}
+              ? 'Faça login para acompanhar e realizar seus pedidos em tempo real'
+              : 'Cadastre-se para aproveitar o melhor do DeliveryHub'}
           </p>
         </div>
 
         {/* Abas */}
-        <div className="flex p-1 bg-zinc-800 rounded-xl mb-6">
+        <div className="flex p-1 bg-zinc-100 rounded-xl mb-6 border border-zinc-200/60">
           <button
             type="button"
             onClick={() => {
@@ -110,7 +110,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               setError(null);
             }}
             className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-              mode === 'login' ? 'bg-red-600 text-white shadow-sm' : 'text-zinc-400 hover:text-white'
+              mode === 'login' ? 'bg-gradient-to-r from-brand-600 to-brand-500 text-white shadow-brand-glow' : 'text-zinc-500 hover:text-zinc-900'
             }`}
           >
             Entrar
@@ -122,7 +122,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               setError(null);
             }}
             className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-              mode === 'register' ? 'bg-red-600 text-white shadow-sm' : 'text-zinc-400 hover:text-white'
+              mode === 'register' ? 'bg-gradient-to-r from-brand-600 to-brand-500 text-white shadow-brand-glow' : 'text-zinc-500 hover:text-zinc-900'
             }`}
           >
             Cadastrar
@@ -131,41 +131,41 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         {/* Mensagem de Erro */}
         {error && (
-          <div className="p-3 mb-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+          <div className="p-3 mb-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-rose-500 flex-shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
-        {/* Formulário */}
+       
         <form onSubmit={handleSubmit} className="space-y-3.5">
           {mode === 'register' && (
             <>
               <div>
-                <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+                <label className="block text-[11px] font-bold text-zinc-500 uppercase tracking-wider mb-1">
                   Nome Completo
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3.5 top-3 w-4 h-4 text-zinc-500" />
+                  <User className="absolute left-3.5 top-3 w-4 h-4 text-zinc-400" />
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="João Silva"
-                    className="w-full bg-zinc-800/80 border border-zinc-700 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500"
+                    className="w-full bg-zinc-50 border border-zinc-200 rounded-xl pl-10 pr-4 py-2.5 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+                <label className="block text-[11px] font-bold text-zinc-500 uppercase tracking-wider mb-1">
                   Perfil de Acesso
                 </label>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value as any)}
-                  className="w-full bg-zinc-800/80 border border-zinc-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-red-500"
+                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2.5 text-xs text-zinc-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition"
                 >
                   <option value="CUSTOMER">Cliente (Fazer Pedidos)</option>
                   <option value="RESTAURANT_OWNER">Restaurante (Gerenciar Cozinha)</option>
@@ -174,17 +174,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+                <label className="block text-[11px] font-bold text-zinc-500 uppercase tracking-wider mb-1">
                   Telefone (WhatsApp)
                 </label>
                 <div className="relative">
-                  <Phone className="absolute left-3.5 top-3 w-4 h-4 text-zinc-500" />
+                  <Phone className="absolute left-3.5 top-3 w-4 h-4 text-zinc-400" />
                   <input
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="(35) 99999-9999"
-                    className="w-full bg-zinc-800/80 border border-zinc-700 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500"
+                    className="w-full bg-zinc-50 border border-zinc-200 rounded-xl pl-10 pr-4 py-2.5 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition"
                   />
                 </div>
               </div>
@@ -192,28 +192,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           )}
 
           <div>
-            <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+            <label className="block text-[11px] font-bold text-zinc-500 uppercase tracking-wider mb-1">
               E-mail
             </label>
             <div className="relative">
-              <Mail className="absolute left-3.5 top-3 w-4 h-4 text-zinc-500" />
+              <Mail className="absolute left-3.5 top-3 w-4 h-4 text-zinc-400" />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="seuemail@exemplo.com"
-                className="w-full bg-zinc-800/80 border border-zinc-700 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500"
+                className="w-full bg-zinc-50 border border-zinc-200 rounded-xl pl-10 pr-4 py-2.5 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+            <label className="block text-[11px] font-bold text-zinc-500 uppercase tracking-wider mb-1">
               Senha
             </label>
             <div className="relative">
-              <Lock className="absolute left-3.5 top-3 w-4 h-4 text-zinc-500" />
+              <Lock className="absolute left-3.5 top-3 w-4 h-4 text-zinc-400" />
               <input
                 type="password"
                 required
@@ -221,7 +221,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••"
-                className="w-full bg-zinc-800/80 border border-zinc-700 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500"
+                className="w-full bg-zinc-50 border border-zinc-200 rounded-xl pl-10 pr-4 py-2.5 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition"
               />
             </div>
           </div>
@@ -229,28 +229,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full mt-3 py-3 rounded-xl bg-red-600 hover:bg-red-500 active:scale-95 text-white font-bold text-xs transition-all shadow-lg shadow-red-600/25 disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full mt-4 py-3.5 rounded-xl bg-gradient-to-r from-brand-600 via-brand-500 to-amber-500 hover:from-brand-500 hover:to-amber-500 active:scale-95 text-white font-black text-xs transition-all shadow-brand-glow disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isLoading ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : mode === 'login' ? (
               <>
                 <LogIn className="w-4 h-4" />
-                <span>Entrar</span>
+                <span>Entrar no DeliveryHub</span>
               </>
             ) : (
               <>
                 <UserPlus className="w-4 h-4" />
-                <span>Cadastrar e Entrar</span>
+                <span>Criar Conta e Entrar</span>
               </>
             )}
           </button>
         </form>
 
-        {/* Atalhos de 1 Clique */}
-        <div className="mt-5 pt-4 border-t border-zinc-800">
+        {/* Atalhos de Demonstração */}
+        <div className="mt-5 pt-4 border-t border-zinc-100">
           <div className="flex items-center gap-1.5 mb-2.5 text-[11px] font-bold text-zinc-400">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
             <span>Acesso Rápido para Demonstração:</span>
           </div>
 
@@ -259,30 +259,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               type="button"
               onClick={() => handleQuick('CUSTOMER')}
               disabled={isLoading}
-              className="p-2 rounded-xl bg-zinc-800 hover:bg-zinc-750 border border-zinc-700/80 text-center transition hover:border-red-500"
+              className="p-2.5 rounded-xl bg-zinc-50 hover:bg-brand-50 border border-zinc-200 text-center transition hover:border-brand-300 active:scale-95"
             >
-              <span className="block font-bold text-red-400 text-xs">👤 Cliente</span>
-              <span className="text-[10px] text-zinc-400">Teste</span>
+              <span className="block font-black text-brand-600 text-xs">Cliente</span>
+              <span className="text-[10px] text-zinc-400 font-medium">Conta Demo</span>
             </button>
 
             <button
               type="button"
               onClick={() => handleQuick('RESTAURANT')}
               disabled={isLoading}
-              className="p-2 rounded-xl bg-zinc-800 hover:bg-zinc-750 border border-zinc-700/80 text-center transition hover:border-amber-500"
+              className="p-2.5 rounded-xl bg-zinc-50 hover:bg-amber-50 border border-zinc-200 text-center transition hover:border-amber-300 active:scale-95"
             >
-              <span className="block font-bold text-amber-400 text-xs">🍳 Dono</span>
-              <span className="text-[10px] text-zinc-400">Restaurante</span>
+              <span className="block font-black text-amber-600 text-xs">Restaurante</span>
+              <span className="text-[10px] text-zinc-400 font-medium">Gestão KDS</span>
             </button>
 
             <button
               type="button"
               onClick={() => handleQuick('DRIVER')}
               disabled={isLoading}
-              className="p-2 rounded-xl bg-zinc-800 hover:bg-zinc-750 border border-zinc-700/80 text-center transition hover:border-orange-500"
+              className="p-2.5 rounded-xl bg-zinc-50 hover:bg-emerald-50 border border-zinc-200 text-center transition hover:border-emerald-300 active:scale-95"
             >
-              <span className="block font-bold text-orange-400 text-xs">🛵 Carlos</span>
-              <span className="text-[10px] text-zinc-400">Entregador</span>
+              <span className="block font-black text-emerald-600 text-xs">Entregador</span>
+              <span className="text-[10px] text-zinc-400 font-medium">App Mobile</span>
             </button>
           </div>
         </div>

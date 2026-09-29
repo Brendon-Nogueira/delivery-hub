@@ -7,12 +7,26 @@
  *    e 'Content-Type: application/json'.
  * 2. Interceptor de Erro: Lança exceções amigáveis e detecta 401 (token expirado ou inválido)
  *    para permitir deslogar ou redirecionar.
+ *
+ * SEGURANÇA JWT:
+ * O token JWT agora é armazenado em MEMÓRIA (variável JavaScript), não no localStorage.
+ * Isso protege contra ataques XSS, pois scripts maliciosos não conseguem acessar
+ * variáveis de escopo do módulo.
+ *
+ * Limitação: ao recarregar a página (F5), o token é perdido e o usuário precisa
+ * fazer login novamente. Isso é intencional — é o trade-off de segurança.
+ * Para resolver isso em produção, use cookies httpOnly no backend (NestJS).
+ *
+ * O `user` (dados não-sensíveis como nome e email) ainda é salvo no localStorage
+ * para exibir a UI rapidamente, mas NÃO contém o token.
  */
 
 export const API_BASE_URL = 'http://localhost:4000';
 
-const TOKEN_KEY = '@deliveryhub:token';
 const USER_KEY = '@deliveryhub:user';
+
+// Token JWT armazenado APENAS em memória (protegido contra XSS)
+let inMemoryToken: string | null = null;
 
 export interface StoredUser {
   id: string;
@@ -22,14 +36,18 @@ export interface StoredUser {
   phone?: string;
 }
 
+/**
+ * Retorna o token JWT da memória.
+ * Não persiste entre recarregamentos de página — isso é intencional.
+ */
 export function getStoredToken(): string | null {
-  try {
-    return localStorage.getItem(TOKEN_KEY);
-  } catch {
-    return null;
-  }
+  return inMemoryToken;
 }
 
+/**
+ * Retorna os dados do usuário do localStorage.
+ * São dados NÃO-sensíveis, usados apenas para renderizar a UI.
+ */
 export function getStoredUser(): StoredUser | null {
   try {
     const raw = localStorage.getItem(USER_KEY);
@@ -39,21 +57,29 @@ export function getStoredUser(): StoredUser | null {
   }
 }
 
+/**
+ * Armazena a autenticação:
+ * - Token: na memória (seguro contra XSS)
+ * - User: no localStorage (dados não-sensíveis para a UI)
+ */
 export function setStoredAuth(token: string, user: StoredUser) {
+  inMemoryToken = token;
   try {
-    localStorage.setItem(TOKEN_KEY, token);
     localStorage.setItem(USER_KEY, JSON.stringify(user));
   } catch (err) {
-    console.error('Erro ao salvar auth no localStorage', err);
+    console.error('Erro ao salvar user no localStorage', err);
   }
 }
 
+/**
+ * Limpa autenticação: memória + localStorage.
+ */
 export function clearStoredAuth() {
+  inMemoryToken = null;
   try {
-    localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
   } catch (err) {
-    console.error('Erro ao limpar auth do localStorage', err);
+    console.error('Erro ao limpar auth', err);
   }
 }
 
@@ -97,18 +123,16 @@ export async function apiFetch<T = any>(endpoint: string, options: ApiFetchOptio
         errorMessage = errorMessage.join(', ');
       }
     } catch {
-      // RESPONSE INVALIDO
+      // Response inválido
     }
 
     if (response.status === 401) {
-      // TOKEN 
       clearStoredAuth();
       window.dispatchEvent(new Event('auth:unauthorized'));
     }
 
     throw new Error(errorMessage);
   }
-
 
   if (response.status === 204) {
     return null as unknown as T;

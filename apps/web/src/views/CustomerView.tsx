@@ -193,33 +193,37 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
   if (orderStatus) {
     return (
       <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full pb-20 animate-fadeIn">
-        <div className="bg-zinc-900 rounded-3xl p-6 md:p-8 shadow-2xl border border-zinc-800">
+        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-card border border-zinc-200/60">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-red-400">
-                Acompanhamento em Tempo Real
-              </span>
-              <h2 className="text-2xl md:text-3xl font-black text-white mt-1">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-brand-50 text-brand-600 border border-brand-200 mb-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
+                Rastreamento em Tempo Real
+              </div>
+              <h2 className="text-2xl md:text-3xl font-black text-zinc-900 tracking-tight">
                 Restaurante Paraisópolis
               </h2>
               <p className="text-xs text-zinc-400 flex items-center gap-1.5 mt-1">
-                <MapPin className="w-3.5 h-3.5 text-red-500" />
+                <MapPin className="w-3.5 h-3.5 text-brand-500" />
                 <span>Destino: Praça Cel. José Vieira, Centro, Paraisópolis - MG</span>
               </p>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="px-3.5 py-1.5 rounded-full text-xs font-bold border border-zinc-700 bg-zinc-800 text-zinc-300">
+              <span className="px-4 py-2 rounded-xl text-xs font-bold border border-zinc-200 bg-zinc-50 text-zinc-600 shadow-sm">
                 Pedido #{activeOrder?.id?.slice(0, 8) || 'Ativo'}
               </span>
             </div>
           </div>
 
           {/* Banner do Status Atual */}
-          <div className="p-5 rounded-2xl border border-zinc-800 bg-zinc-950/80 mb-8">
+          <div className="p-5 rounded-2xl border border-zinc-100 bg-gradient-to-r from-zinc-50 via-white to-zinc-50 mb-8 relative overflow-hidden">
             <div className="flex items-center gap-3">
-              <div className={`w-3 h-3 rounded-full ${statusColors[orderStatus]} animate-pulse`} />
-              <h3 className="text-base font-bold text-white tracking-wide">
+              <div className="relative">
+                <div className={`w-3.5 h-3.5 rounded-full ${statusColors[orderStatus]}`} />
+                <div className={`absolute inset-0 rounded-full ${statusColors[orderStatus]} animate-ping opacity-75`} />
+              </div>
+              <h3 className="text-base font-black text-zinc-900 tracking-wide">
                 {orderStatus === 'PENDING' && 'Pedido Enviado para a Cozinha'}
                 {orderStatus === 'PREPARING' && 'Cozinha Preparando Seu Prato'}
                 {orderStatus === 'READY' && 'Pronto! Aguardando o Entregador'}
@@ -227,7 +231,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                 {orderStatus === 'DELIVERED' && 'Pedido Entregue com Sucesso'}
               </h3>
             </div>
-            <p className="mt-2 text-zinc-400 text-xs font-medium">{statusMessages[orderStatus]}</p>
+            <p className="mt-2 text-zinc-500 text-xs font-medium leading-relaxed">{statusMessages[orderStatus]}</p>
           </div>
 
           {/* Stepper Visual */}
@@ -251,24 +255,24 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                 return (
                   <div
                     key={step}
-                    className={`flex flex-col items-center p-3 rounded-2xl border text-center transition-all ${
+                    className={`flex flex-col items-center p-3.5 rounded-2xl border text-center transition-all ${
                       isActive
-                        ? 'border-red-500 bg-red-600/10 text-white shadow-sm'
+                        ? 'border-brand-300 bg-brand-50 text-zinc-900 shadow-brand-glow'
                         : isPast
-                        ? 'border-zinc-700 bg-zinc-800/80 text-zinc-300'
-                        : 'border-zinc-800/60 bg-zinc-900/40 text-zinc-600'
+                        ? 'border-emerald-200 bg-emerald-50 text-zinc-700'
+                        : 'border-zinc-200/60 bg-zinc-50 text-zinc-400'
                     }`}
                   >
                     <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mb-1.5 ${
+                      className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black mb-2 transition-all ${
                         isActive
-                          ? 'bg-red-600 text-white'
+                          ? 'bg-gradient-to-tr from-brand-600 to-amber-500 text-white shadow-sm scale-110'
                           : isPast
-                          ? 'bg-emerald-500/20 text-emerald-400'
-                          : 'bg-zinc-800 text-zinc-600'
+                          ? 'bg-emerald-100 text-emerald-600'
+                          : 'bg-zinc-100 text-zinc-400'
                       }`}
                     >
-                      {isPast ? <CheckCircle2 className="w-4 h-4" /> : stepIdx + 1}
+                      {isPast ? <CheckCircle2 className="w-4 h-4 stroke-[3]" /> : stepIdx + 1}
                     </div>
                     <span className="text-xs font-bold">{stepLabels[step]}</span>
                   </div>
@@ -278,7 +282,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
           </div>
 
           {/* Mapa do Leaflet */}
-          <div className="rounded-2xl overflow-hidden border border-zinc-800 shadow-xl h-[380px] mb-6">
+          <div className="rounded-2xl overflow-hidden border border-zinc-200 shadow-card h-[380px] mb-6">
             <MapTracker
               restaurantLocation={restaurantLocation}
               customerLocation={customerLocation}
@@ -288,7 +292,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
           </div>
 
           {/* Ações pós-entrega ou retorno */}
-          <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-zinc-800">
+          <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-zinc-100">
             <p className="text-xs text-zinc-400">
               {orderStatus === 'DELIVERED'
                 ? 'Seu pedido foi entregue. Obrigado pela preferência!'
@@ -298,7 +302,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
             {onResetOrder && (
               <button
                 onClick={onResetOrder}
-                className="px-5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs transition border border-zinc-700"
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-amber-500 text-white font-bold text-xs transition shadow-brand-glow active:scale-95"
               >
                 {orderStatus === 'DELIVERED' ? 'Fazer Novo Pedido' : 'Ver Cardápio'}
               </button>
@@ -309,57 +313,62 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
     );
   }
 
-  // TELA PRINCIPAL: Cardápio com Visual iFood / Gourmet Profissional
+  // TELA PRINCIPAL: Cardápio com Visual Comercial de Alto Padrão
   return (
     <div className="flex flex-col gap-6 max-w-6xl mx-auto w-full pb-32 animate-fadeIn">
-      {/* Banner Principal do Restaurante (Estilo iFood) */}
-      <div className="relative rounded-3xl overflow-hidden border border-zinc-800 bg-zinc-900 shadow-xl">
+      {/* Banner Principal do Restaurante */}
+      <div className="relative rounded-3xl overflow-hidden border border-zinc-200/60 bg-white shadow-card">
         {/* Capa Fotográfica */}
-        <div className="relative h-44 md:h-52 w-full overflow-hidden bg-zinc-950">
+        <div className="relative h-48 md:h-56 w-full overflow-hidden bg-zinc-100">
           <img
             src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80"
             alt="Capa Restaurante Paraisópolis"
-            className="w-full h-full object-cover opacity-60"
+            className="w-full h-full object-cover scale-105"
             referrerPolicy="no-referrer"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-white via-white/30 to-transparent" />
         </div>
 
         {/* Informações Sobrepostas do Restaurante */}
         <div className="relative px-6 pb-6 pt-2 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="flex items-start md:items-center gap-4">
-            {/* Logo / Avatar do Restaurante */}
-            <div className="-mt-12 md:-mt-14 w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-zinc-900 border-4 border-zinc-900 shadow-2xl overflow-hidden flex items-center justify-center text-3xl font-black text-red-500 flex-shrink-0">
-              🍳
+            {/* Logo do Restaurante (Monograma Tipográfico Profissional) */}
+            <div className="-mt-14 md:-mt-16 w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-white border-4 border-white shadow-card-hover overflow-hidden flex items-center justify-center flex-shrink-0">
+              <span className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-tr from-brand-500 to-amber-400 tracking-tighter">
+                RP
+              </span>
             </div>
 
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
+                <h1 className="text-2xl md:text-3xl font-black text-zinc-900 tracking-tight">
                   Restaurante Paraisópolis
                 </h1>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  Aberto
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Aberto Agora
                 </span>
               </div>
-              <p className="text-xs text-zinc-400 mt-0.5">
+              <p className="text-xs text-zinc-500 mt-1">
                 Culinária Mineira • Carnes na Chapa • Lanches Artesanais
               </p>
 
               {/* Informações Rápidas */}
-              <div className="flex flex-wrap items-center gap-3 mt-3 text-xs font-semibold text-zinc-300">
-                <span className="flex items-center gap-1 bg-zinc-800/90 px-2.5 py-1 rounded-lg border border-zinc-700/60">
+              <div className="flex flex-wrap items-center gap-2.5 mt-3 text-xs font-semibold text-zinc-600">
+                <span className="flex items-center gap-1.5 bg-zinc-50 px-3 py-1.5 rounded-xl border border-zinc-200/60 shadow-sm">
                   <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                  <strong className="text-white">4.9</strong>
-                  <span className="text-zinc-500">(150+ avaliações)</span>
+                  <strong className="text-zinc-900">4.9</strong>
+                  <span className="text-zinc-400">(150+ avaliações)</span>
                 </span>
-                <span className="flex items-center gap-1 bg-zinc-800/90 px-2.5 py-1 rounded-lg border border-zinc-700/60">
+                <span className="flex items-center gap-1.5 bg-zinc-50 px-3 py-1.5 rounded-xl border border-zinc-200/60 shadow-sm">
                   <Clock className="w-3.5 h-3.5 text-zinc-400" />
                   <span>30 - 45 min</span>
                 </span>
-                <span className="flex items-center gap-1 bg-zinc-800/90 px-2.5 py-1 rounded-lg border border-zinc-700/60">
-                  <Bike className="w-3.5 h-3.5 text-red-400" />
+                <span className="flex items-center gap-1.5 bg-zinc-50 px-3 py-1.5 rounded-xl border border-zinc-200/60 shadow-sm">
+                  <Bike className="w-3.5 h-3.5 text-brand-500" />
                   <span>Entrega R$ 5,00</span>
                 </span>
               </div>
@@ -370,13 +379,13 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
           {totalCartCount > 0 && (
             <button
               onClick={() => setIsDrawerOpen(true)}
-              className="flex items-center justify-between gap-3 px-5 py-3 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm shadow-xl shadow-red-600/20 active:scale-95 transition"
+              className="flex items-center justify-between gap-3 px-5 py-3 rounded-2xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-amber-500 text-white font-bold text-sm shadow-brand-glow active:scale-95 transition"
             >
               <div className="flex items-center gap-2">
                 <ShoppingBag className="w-4 h-4" />
                 <span>Ver Sacola ({totalCartCount})</span>
               </div>
-              <span className="bg-black/20 px-2 py-0.5 rounded-lg text-xs font-black">
+              <span className="bg-black/20 px-2.5 py-0.5 rounded-lg text-xs font-black">
                 R$ {grandTotal.toFixed(2).replace('.', ',')}
               </span>
             </button>
@@ -388,26 +397,26 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         {/* Campo de Busca Interativo */}
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3.5 top-3 w-4 h-4 text-zinc-500" />
+          <Search className="absolute left-3.5 top-3 w-4 h-4 text-zinc-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar pratos, bebidas ou sobremesas..."
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition shadow-sm"
+            className="w-full bg-white border border-zinc-200/60 rounded-2xl pl-10 pr-9 py-2.5 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition shadow-sm"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-2.5 text-xs text-zinc-500 hover:text-white"
+              className="absolute right-3 top-2.5 text-xs text-zinc-400 hover:text-zinc-700"
             >
               ✕
             </button>
           )}
         </div>
 
-        {/* Categorias (Pills Estilo iFood) */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {/* Categorias */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
           {categories.map((cat) => {
             const isSelected = selectedCategory === cat;
             const count =
@@ -419,16 +428,16 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                className={`px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 active:scale-95 ${
                   isSelected
-                    ? 'bg-red-600 text-white shadow-md shadow-red-600/20'
-                    : 'bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800 border border-zinc-800'
+                    ? 'bg-gradient-to-r from-brand-600 to-brand-500 text-white shadow-brand-glow'
+                    : 'bg-white text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 border border-zinc-200/60'
                 }`}
               >
                 <span>{cat}</span>
                 <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                    isSelected ? 'bg-black/20 text-white' : 'bg-zinc-800 text-zinc-500'
+                  className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                    isSelected ? 'bg-black/20 text-white' : 'bg-zinc-100 text-zinc-400'
                   }`}
                 >
                   {count}
@@ -445,29 +454,29 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div
               key={i}
-              className="h-72 rounded-2xl bg-zinc-900/60 border border-zinc-800 animate-pulse p-4 flex flex-col justify-between"
+              className="h-72 rounded-2xl bg-white border border-zinc-200/60 animate-pulse p-4 flex flex-col justify-between shadow-card"
             >
-              <div className="h-36 bg-zinc-800 rounded-xl" />
-              <div className="h-4 bg-zinc-800 rounded w-3/4 mt-3" />
-              <div className="h-3 bg-zinc-800 rounded w-1/2" />
+              <div className="h-36 bg-zinc-100 rounded-xl" />
+              <div className="h-4 bg-zinc-100 rounded w-3/4 mt-3" />
+              <div className="h-3 bg-zinc-100 rounded w-1/2" />
               <div className="flex justify-between items-center mt-4">
-                <div className="h-6 bg-zinc-800 rounded w-20" />
-                <div className="h-8 bg-zinc-800 rounded w-24" />
+                <div className="h-6 bg-zinc-100 rounded w-20" />
+                <div className="h-8 bg-zinc-100 rounded w-24" />
               </div>
             </div>
           ))}
         </div>
       ) : menuError ? (
-        <div className="text-center py-16 bg-zinc-900 rounded-3xl border border-zinc-800 p-8">
-          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
-          <h3 className="text-base font-bold text-white">Erro ao carregar cardápio</h3>
-          <p className="text-zinc-400 text-xs mt-1">{menuError}</p>
+        <div className="text-center py-16 bg-white rounded-3xl border border-zinc-200/60 p-8 shadow-card">
+          <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-3" />
+          <h3 className="text-base font-bold text-zinc-900">Erro ao carregar cardápio</h3>
+          <p className="text-zinc-500 text-xs mt-1">{menuError}</p>
         </div>
       ) : filteredItems.length === 0 ? (
-        <div className="text-center py-16 bg-zinc-900 rounded-3xl border border-zinc-800 p-8">
-          <UtensilsCrossed className="w-12 h-12 text-zinc-600 mx-auto mb-3" />
-          <h3 className="text-base font-bold text-white">Nenhum prato encontrado</h3>
-          <p className="text-zinc-400 text-xs mt-1">
+        <div className="text-center py-16 bg-white rounded-3xl border border-zinc-200/60 p-8 shadow-card">
+          <UtensilsCrossed className="w-12 h-12 text-zinc-300 mx-auto mb-3" />
+          <h3 className="text-base font-bold text-zinc-900">Nenhum prato encontrado</h3>
+          <p className="text-zinc-500 text-xs mt-1">
             {searchQuery
               ? `Nenhum resultado para "${searchQuery}". Tente outro termo.`
               : 'Nenhum prato cadastrado nesta categoria.'}
@@ -490,14 +499,14 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
       {/* Barra Flutuante de Sacola no Rodapé (Mobile / Desktop) */}
       {totalCartCount > 0 && !isDrawerOpen && (
         <div className="fixed bottom-6 left-4 right-4 max-w-lg mx-auto z-40 animate-slideUp">
-          <div className="flex items-center justify-between p-3.5 px-4 rounded-2xl bg-zinc-900/95 border border-zinc-700/80 shadow-2xl backdrop-blur-md">
+          <div className="flex items-center justify-between p-3.5 px-4 rounded-2xl bg-white/95 border border-zinc-200 shadow-drawer backdrop-blur-md">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center font-bold text-sm shadow-md">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-amber-400 text-white flex items-center justify-center font-black text-sm shadow-brand-glow">
                 {totalCartCount}
               </div>
               <div>
                 <span className="text-[11px] text-zinc-400 block font-medium">Total com entrega:</span>
-                <p className="text-base font-black text-white">
+                <p className="text-base font-black text-zinc-900">
                   R$ {grandTotal.toFixed(2).replace('.', ',')}
                 </p>
               </div>
@@ -505,7 +514,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
 
             <button
               onClick={() => setIsDrawerOpen(true)}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs transition shadow-lg shadow-red-600/30 active:scale-95"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-amber-500 text-white font-black text-xs transition shadow-brand-glow active:scale-95"
             >
               <span>Ver Sacola</span>
               <ShoppingBag className="w-4 h-4" />

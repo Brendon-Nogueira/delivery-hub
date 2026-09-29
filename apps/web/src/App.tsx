@@ -4,15 +4,31 @@ import { RoleNavigation, Role } from './components/RoleNavigation';
 import { CustomerView } from './views/CustomerView';
 import { RestaurantView, Order as RestaurantOrder } from './views/RestaurantView';
 import { DriverView } from './views/DriverView';
+import { OrderHistoryView } from './views/OrderHistoryView';
 import { audioSynth } from './utils/audio';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ToastProvider, useToast } from './contexts/ToastContext';
 import { UserHeader } from './components/UserHeader';
 import { apiFetch, API_BASE_URL } from './utils/api';
 
 type OrderStatus = 'PENDING' | 'PREPARING' | 'READY' | 'ON_THE_WAY' | 'DELIVERED';
 
+/**
+ * STATUS → MENSAGEM TOAST
+ * Mapeia cada transição de status a uma mensagem de toast.
+ * Conceito: Lookup table (Record) é mais limpo que um switch/case.
+ */
+const statusToastMessages: Record<string, { title: string; message: string; type: 'success' | 'info' | 'warning' }> = {
+  PENDING: { title: 'Pedido Enviado!', message: 'Aguardando confirmação do restaurante.', type: 'info' },
+  PREPARING: { title: 'Pedido Aceito!', message: 'O restaurante começou a preparar seu prato.', type: 'success' },
+  READY: { title: 'Pedido Pronto!', message: 'Aguardando o entregador coletar.', type: 'info' },
+  ON_THE_WAY: { title: 'Saiu para Entrega!', message: 'O entregador está a caminho.', type: 'success' },
+  DELIVERED: { title: 'Pedido Entregue!', message: 'Bom apetite! Avalie seu pedido.', type: 'success' },
+};
+
 function AppContent() {
   const { user, token, isAuthenticated, quickLogin } = useAuth();
+  const { addToast } = useToast();
   const [currentRole, setCurrentRole] = useState<Role>('CUSTOMER');
 
   // Sockets
@@ -27,10 +43,10 @@ function AppContent() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Coordenadas fixas (Paraisópolis - MG)
-  const RESTAURANT_LOC = { lat: -22.5538, lng: -45.7796 }; // Praça Cel. José Vieira
-  const CUSTOMER_LOC = { lat: -22.548, lng: -45.775 }; // Bairro residencial
+  const RESTAURANT_LOC = { lat: -22.5538, lng: -45.7796 };
+  const CUSTOMER_LOC = { lat: -22.548, lng: -45.775 };
 
-  
+  // Auto-select role por perfil do usuário
   useEffect(() => {
     if (user) {
       if (user.role === 'RESTAURANT_OWNER') {
@@ -43,7 +59,7 @@ function AppContent() {
     }
   }, [user]);
 
-  
+  // Carregar pedidos iniciais do restaurante (para a view KDS)
   useEffect(() => {
     apiFetch<any[]>('/api/v1/orders/restaurant/rest-123')
       .then((data) => {
@@ -63,7 +79,7 @@ function AppContent() {
       .catch((err) => console.log('Histórico inicial:', err));
   }, []);
 
-  // Conexão e sincronização com WebSocket (autenticado com JWT via token)
+  // Conexão e sincronização com WebSocket
   useEffect(() => {
     const socketOptions = token ? { auth: { token } } : {};
     const ordSocket = io(`${API_BASE_URL}/orders`, socketOptions);
@@ -82,7 +98,7 @@ function AppContent() {
 
     ordSocket.on('disconnect', () => setConnected(false));
 
-    
+    // Novo pedido recebido
     const handleNewOrder = (order: any) => {
       const formattedOrder: RestaurantOrder = {
         id: order.id,
@@ -99,18 +115,31 @@ function AppContent() {
         return [formattedOrder, ...prev];
       });
 
-      
       setCurrentOrderId((prev) => prev || formattedOrder.id);
+
+      // Toast de novo pedido (para o restaurante)
+      addToast({
+        type: 'warning',
+        title: 'Novo Pedido Recebido!',
+        message: `Cliente ${order.customer?.name || 'App'} fez um pedido.`,
+      });
     };
 
     ordSocket.on('newOrder', handleNewOrder);
     ordSocket.on('orderCreated', handleNewOrder);
 
-    
+    // Mudança de status
     const handleStatusChanged = (data: { orderId: string; status: OrderStatus }) => {
       setOrders((prev) =>
         prev.map((o) => (o.id === data.orderId ? { ...o, status: data.status } : o))
       );
+
+      // Toast de mudança de status
+      const toastConfig = statusToastMessages[data.status];
+      if (toastConfig) {
+        addToast(toastConfig);
+      }
+
       if (data.status !== 'PENDING') {
         audioSynth.playSuccessSound();
       }
@@ -119,7 +148,7 @@ function AppContent() {
     ordSocket.on('orderStatusChanged', handleStatusChanged);
     ordSocket.on('orderStatusUpdated', handleStatusChanged);
 
-    // Escuta telemetria do entregador (GPS)
+    // Telemetria do entregador (GPS)
     const handleLocationUpdate = (data: { orderId: string; lat: number; lng: number }) => {
       setDriverLocation({ lat: data.lat, lng: data.lng });
     };
@@ -138,14 +167,13 @@ function AppContent() {
     };
   }, [token, currentOrderId]);
 
-  
+  // Criar pedido
   const handleCreateOrder = async (
     items: Array<{ menuItemId: string; quantity: number }>,
     notes?: string
   ) => {
     setIsLoading(true);
     try {
-      
       if (!isAuthenticated) {
         await quickLogin('CUSTOMER');
       }
@@ -172,20 +200,27 @@ function AppContent() {
       setOrders((prev) => [newOrder, ...prev.filter((o) => o.id !== newOrder.id)]);
       setCurrentOrderId(data.id);
 
-      // Entra nas salas do pedido nos sockets
       ordersSocket?.emit('joinOrderRoom', { orderId: data.id });
       deliverySocket?.emit('joinDeliveryRoom', { orderId: data.id });
 
-      audioSynth.playSuccessSound();
+      addToast({
+        type: 'success',
+        title: 'Pedido Criado!',
+        message: 'Seu pedido foi enviado ao restaurante.',
+      });
     } catch (error: any) {
       console.error('Erro ao criar pedido:', error);
-      alert(`Erro ao criar pedido: ${error.message || 'Verifique a conexão com o backend'}`);
+      addToast({
+        type: 'error',
+        title: 'Erro ao criar pedido',
+        message: error.message || 'Verifique a conexão com o backend.',
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
- 
+  // Atualizar status do pedido
   const handleUpdateStatus = (orderId: string, status: OrderStatus) => {
     setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)));
     if (ordersSocket) {
@@ -193,9 +228,15 @@ function AppContent() {
     }
   };
 
-  
+  // Aceitar entrega
   const handleAcceptDelivery = async (orderId: string) => {
     handleUpdateStatus(orderId, 'ON_THE_WAY');
+
+    addToast({
+      type: 'success',
+      title: 'Corrida Aceita!',
+      message: 'Navegue até o restaurante para coletar o pedido.',
+    });
 
     try {
       await apiFetch(`/api/v1/delivery/simulate-trip/${orderId}`, { method: 'POST' });
@@ -204,20 +245,38 @@ function AppContent() {
     }
   };
 
+  // Finalizar entrega
   const handleCompleteDelivery = (orderId: string) => {
     handleUpdateStatus(orderId, 'DELIVERED');
     setDriverLocation(null);
     audioSynth.playSuccessSound();
+
+    addToast({
+      type: 'success',
+      title: 'Entrega Finalizada!',
+      message: 'Corrida concluída com sucesso.',
+    });
   };
 
+  // Limpar pedidos
   const handleClearOrders = async () => {
     if (window.confirm('Deseja limpar todos os pedidos da fila do KDS?')) {
       try {
         await apiFetch('/api/v1/orders/clear', { method: 'DELETE' });
         setOrders([]);
         setCurrentOrderId(null);
+        addToast({
+          type: 'info',
+          title: 'Fila Limpa',
+          message: 'Todos os pedidos foram removidos.',
+        });
       } catch (error: any) {
         console.error('Erro ao limpar pedidos:', error);
+        addToast({
+          type: 'error',
+          title: 'Erro ao limpar',
+          message: error.message,
+        });
       }
     }
   };
@@ -226,12 +285,10 @@ function AppContent() {
   const activeCustomerOrder = orders.find((o) => o.id === currentOrderId);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 p-3 md:p-6 font-sans antialiased selection:bg-red-500 selection:text-white">
+    <div className="min-h-screen bg-zinc-50 text-zinc-900 p-3 md:p-6 font-sans antialiased selection:bg-brand-500 selection:text-white relative">
       <div className="max-w-6xl mx-auto">
-        {/* Barra Usuário */}
         <UserHeader />
 
-      
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-6">
           <RoleNavigation
             currentRole={currentRole}
@@ -239,22 +296,29 @@ function AppContent() {
             pendingOrdersCount={pendingCount}
           />
 
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-[11px] text-zinc-400">
-            <span
-              className={`w-2 h-2 rounded-full ${
-                connected ? 'bg-emerald-500' : 'bg-red-500'
-              }`}
-            />
-            <span>{connected ? 'Tempo Real Ativo' : 'Offline'}</span>
+          <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-white border border-zinc-200/60 text-[11px] text-zinc-500 shadow-sm">
+            <span className="relative flex h-2.5 w-2.5">
+              {connected && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              )}
+              <span
+                className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                  connected ? 'bg-emerald-500' : 'bg-rose-500'
+                }`}
+              />
+            </span>
+            <span className="font-semibold text-zinc-700">
+              {connected ? 'Tempo Real Ativo' : 'Offline'}
+            </span>
             {user && (
-              <span className="text-zinc-500 hidden md:inline">
+              <span className="text-zinc-400 hidden md:inline font-medium">
                 • {user.name.split(' ')[0]}
               </span>
             )}
           </div>
         </div>
 
-        {/* View*/}
+        {/* Views */}
         <main>
           {currentRole === 'CUSTOMER' && (
             <CustomerView
@@ -269,6 +333,8 @@ function AppContent() {
               onResetOrder={() => setCurrentOrderId(null)}
             />
           )}
+
+          {currentRole === 'HISTORY' && <OrderHistoryView />}
 
           {currentRole === 'RESTAURANT' && (
             <RestaurantView
@@ -294,10 +360,23 @@ function AppContent() {
   );
 }
 
+/**
+ * CONCEITO: Composição de Providers
+ *
+ * AuthProvider > ToastProvider > AppContent
+ *
+ * A ordem importa:
+ * - AuthProvider DEVE estar por fora do ToastProvider, porque o login pode
+ *   precisar existir antes dos toasts
+ * - ToastProvider DEVE envolver AppContent, para que useToast() funcione
+ *   em qualquer componente filho
+ */
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </AuthProvider>
   );
 }

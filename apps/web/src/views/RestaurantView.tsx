@@ -102,24 +102,32 @@ export const RestaurantView: React.FC<RestaurantViewProps> = ({ orders, onUpdate
 
     return (
       <div
-        className={`p-4 rounded-2xl border transition-all ${
+        className={`p-4 rounded-2xl border transition-all duration-300 ${
           isPending
-            ? 'border-red-500/50 bg-red-950/20 shadow-lg shadow-red-500/5'
-            : 'border-slate-800 bg-slate-900/90'
-        } mb-3`}
+            ? 'border-brand-300 bg-brand-50/50 shadow-brand-glow'
+            : 'border-zinc-200/60 bg-white hover:border-zinc-300'
+        } mb-3.5 shadow-card`}
       >
         <div className="flex justify-between items-start mb-3">
           <div>
-            <span className="text-xs font-mono text-slate-400">
-              #{order.id.slice(0, 8)}
-            </span>
-            <div className="font-bold text-white text-base mt-0.5">{customerName}</div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-mono font-bold text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-md">
+                #{order.id.slice(0, 8)}
+              </span>
+              {isPending && (
+                <span className="flex h-2 w-2 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-500"></span>
+                </span>
+              )}
+            </div>
+            <div className="font-extrabold text-zinc-900 text-base mt-1 tracking-tight">{customerName}</div>
             {order.customer?.phone && (
-              <span className="text-[11px] text-slate-500">{order.customer.phone}</span>
+              <span className="text-[11px] text-zinc-400">{order.customer.phone}</span>
             )}
           </div>
-          <div className="text-xs text-slate-400 flex items-center gap-1 bg-slate-800/80 px-2 py-1 rounded-lg border border-slate-700">
-            <Clock className="w-3 h-3 text-emerald-400" />
+          <div className="text-xs text-zinc-600 flex items-center gap-1.5 bg-zinc-50 px-2.5 py-1 rounded-xl border border-zinc-200/60 font-medium">
+            <Clock className="w-3.5 h-3.5 text-emerald-500" />
             {new Date(order.createdAt).toLocaleTimeString([], {
               hour: '2-digit',
               minute: '2-digit',
@@ -127,14 +135,17 @@ export const RestaurantView: React.FC<RestaurantViewProps> = ({ orders, onUpdate
           </div>
         </div>
 
-        {/* Lista Itens  */}
-        <div className="text-xs text-slate-300 mb-3 border-l-2 border-emerald-500/50 pl-3 py-1 space-y-1 bg-slate-950/30 rounded-r-lg">
+        {/* Lista de Itens Estilo Comanda */}
+        <div className="text-xs text-zinc-600 mb-3 border-l-2 border-brand-400 pl-3 py-1.5 space-y-1.5 bg-zinc-50 rounded-r-xl">
           {items.map((it, idx) => (
-            <div key={idx} className="flex justify-between">
-              <span className="font-medium text-white">
-                {it.qty}x {it.name}
+            <div key={idx} className="flex justify-between items-center">
+              <span className="font-bold text-zinc-800 flex items-center gap-1.5">
+                <span className="w-5 h-5 rounded-md bg-white text-brand-600 flex items-center justify-center text-[10px] font-black border border-zinc-200">
+                  {it.qty}x
+                </span>
+                <span>{it.name}</span>
               </span>
-              <span className="text-slate-400 font-mono">
+              <span className="text-zinc-400 font-mono text-[11px]">
                 R$ {(it.price * it.qty).toFixed(2).replace('.', ',')}
               </span>
             </div>
@@ -143,16 +154,16 @@ export const RestaurantView: React.FC<RestaurantViewProps> = ({ orders, onUpdate
 
         {/* Observações */}
         {order.notes && (
-          <div className="mb-3 p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-start gap-1.5">
-            <MessageSquare className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-            <span>Obs: {order.notes}</span>
+          <div className="mb-3 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-start gap-2">
+            <MessageSquare className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-600" />
+            <span className="font-medium">Obs: {order.notes}</span>
           </div>
         )}
 
         {/* Total do Pedido */}
-        <div className="flex justify-between items-center text-xs font-bold text-slate-400 mb-4 pt-2 border-t border-slate-800">
-          <span>Total:</span>
-          <span className="text-emerald-400 font-mono text-sm">
+        <div className="flex justify-between items-center text-xs font-bold text-zinc-400 mb-4 pt-2.5 border-t border-zinc-100">
+          <span>Total do Pedido:</span>
+          <span className="text-emerald-600 font-mono text-sm font-black">
             R$ {total.toFixed(2).replace('.', ',')}
           </span>
         </div>
@@ -160,9 +171,9 @@ export const RestaurantView: React.FC<RestaurantViewProps> = ({ orders, onUpdate
         {order.status === 'PENDING' && (
           <button
             onClick={() => handleAcceptOrder(order)}
-            className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-500/20 active:scale-95 text-sm"
+            className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-black py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-600/20 active:scale-95 text-xs"
           >
-            <CheckCircle className="w-4 h-4" />
+            <CheckCircle className="w-4 h-4 stroke-[2.5]" />
             Aceitar & Imprimir Comanda
           </button>
         )}
@@ -182,14 +193,14 @@ export const RestaurantView: React.FC<RestaurantViewProps> = ({ orders, onUpdate
                   createdAt: order.createdAt,
                 });
               }}
-              className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition border border-slate-700"
-              title="Reimprimir Comanda"
+              className="p-3 bg-zinc-50 hover:bg-zinc-100 text-zinc-600 rounded-xl transition border border-zinc-200 active:scale-95"
+              title="Reimprimir Comanda Térmica"
             >
               <Printer className="w-4 h-4" />
             </button>
             <button
               onClick={() => handleOrderReady(order.id)}
-              className="flex-1 bg-blue-500 hover:bg-blue-400 text-slate-950 font-bold py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition text-sm shadow-md shadow-blue-500/20 active:scale-95"
+              className="flex-1 bg-gradient-to-r from-sky-600 to-sky-500 hover:from-sky-500 hover:to-sky-400 text-white font-black py-3 rounded-xl flex items-center justify-center gap-2 transition text-xs shadow-lg shadow-sky-600/20 active:scale-95"
             >
               <Utensils className="w-4 h-4" />
               Marcar como Pronto
@@ -198,8 +209,9 @@ export const RestaurantView: React.FC<RestaurantViewProps> = ({ orders, onUpdate
         )}
 
         {order.status === 'READY' && (
-          <div className="w-full bg-slate-800/60 text-slate-400 font-medium py-2.5 rounded-xl text-center border border-slate-700/60 border-dashed text-xs">
-            Aguardando Coleta do Entregador...
+          <div className="w-full bg-zinc-50 text-zinc-400 font-semibold py-3 rounded-xl text-center border border-zinc-200 border-dashed text-xs flex items-center justify-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-amber-500 animate-spin" />
+            <span>Aguardando Coleta do Entregador...</span>
           </div>
         )}
       </div>
@@ -207,16 +219,16 @@ export const RestaurantView: React.FC<RestaurantViewProps> = ({ orders, onUpdate
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto flex flex-col gap-6 animate-fadeIn">
-      {/* KDS */}
-      <div className="bg-zinc-900 rounded-2xl p-4 md:p-5 border border-zinc-800 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+    <div className="w-full max-w-6xl mx-auto flex flex-col gap-6 animate-fadeIn pb-24">
+      {/* KDS Header */}
+      <div className="bg-white rounded-2xl p-4 md:p-5 border border-zinc-200/60 flex flex-wrap items-center justify-between gap-4 shadow-card">
         <div className="flex items-center gap-3">
-          <div className="bg-amber-500/10 p-2.5 rounded-xl text-amber-500 border border-amber-500/20">
+          <div className="bg-gradient-to-tr from-amber-600 to-amber-500 p-2.5 rounded-xl text-white shadow-lg shadow-amber-500/20">
             <ChefHat className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-black text-white">KDS — Kitchen Display System</h2>
-            <p className="text-xs text-zinc-400">Painel Operacional da Cozinha • Paraisópolis - MG</p>
+            <h2 className="text-xl font-black text-zinc-900 tracking-tight">KDS — Kitchen Display System</h2>
+            <p className="text-xs text-zinc-400">Painel Operacional em Tempo Real • Paraisópolis - MG</p>
           </div>
         </div>
 
@@ -224,7 +236,7 @@ export const RestaurantView: React.FC<RestaurantViewProps> = ({ orders, onUpdate
           {orders.length > 0 && onClearOrders && (
             <button
               onClick={onClearOrders}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-red-500/10 hover:text-red-400 border border-zinc-700/80 text-zinc-400 text-xs font-semibold transition"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-50 hover:bg-rose-50 hover:text-rose-600 border border-zinc-200 text-zinc-500 text-xs font-bold transition active:scale-95"
               title="Limpar pedidos de teste"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -233,70 +245,76 @@ export const RestaurantView: React.FC<RestaurantViewProps> = ({ orders, onUpdate
           )}
 
           {pendingOrders.length > 0 && (
-            <div className="flex items-center gap-2 bg-red-500/10 text-red-400 px-4 py-2 rounded-xl font-bold border border-red-500/20 text-xs">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            <div className="flex items-center gap-2 bg-rose-50 text-rose-700 px-3.5 py-2 rounded-xl font-bold border border-rose-200 text-xs shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
               <span>{pendingOrders.length} Novo(s) Pedido(s) Aguardando Confirmação</span>
             </div>
           )}
         </div>
       </div>
 
-    
+      {/* Grid Kanban KDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-   
-        <div className="bg-zinc-900/60 rounded-2xl border border-zinc-800 flex flex-col min-h-[500px]">
-          <div className="p-4 border-b border-zinc-800 flex justify-between items-center">
-            <h3 className="font-bold text-white text-sm flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+        {/* Coluna 1: Novos Pedidos */}
+        <div className="bg-zinc-50/50 rounded-2xl border border-zinc-200/60 flex flex-col min-h-[520px] shadow-card">
+          <div className="p-4 border-b border-zinc-200/60 flex justify-between items-center bg-white rounded-t-2xl">
+            <h3 className="font-black text-zinc-900 text-sm flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
               <span>Novos Pedidos</span>
             </h3>
-            <span className="bg-zinc-800 text-zinc-300 font-bold px-2.5 py-0.5 rounded-lg text-xs">
+            <span className="bg-rose-50 text-rose-600 border border-rose-200 font-black px-2.5 py-0.5 rounded-lg text-xs">
               {pendingOrders.length}
             </span>
           </div>
-          <div className="p-4 overflow-y-auto flex-1">
+          <div className="p-4 overflow-y-auto flex-1 flex flex-col justify-center">
             {pendingOrders.length === 0 ? (
-              <p className="text-xs text-zinc-500 text-center py-12">Nenhum pedido pendente</p>
+              <div className="text-center py-16">
+                <p className="text-xs text-zinc-400 font-medium">Nenhum pedido pendente</p>
+              </div>
             ) : (
               pendingOrders.map((o) => <OrderCard key={o.id} order={o} isPending={true} />)
             )}
           </div>
         </div>
 
-   
-        <div className="bg-zinc-900/60 rounded-2xl border border-zinc-800 flex flex-col min-h-[500px]">
-          <div className="p-4 border-b border-zinc-800 flex justify-between items-center">
-            <h3 className="font-bold text-white text-sm flex items-center gap-2">
+        {/* Coluna 2: Em Preparo */}
+        <div className="bg-zinc-50/50 rounded-2xl border border-zinc-200/60 flex flex-col min-h-[520px] shadow-card">
+          <div className="p-4 border-b border-zinc-200/60 flex justify-between items-center bg-white rounded-t-2xl">
+            <h3 className="font-black text-zinc-900 text-sm flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-sky-500" />
               <span>Na Cozinha (Preparo)</span>
             </h3>
-            <span className="bg-zinc-800 text-zinc-300 font-bold px-2.5 py-0.5 rounded-lg text-xs">
+            <span className="bg-sky-50 text-sky-600 border border-sky-200 font-black px-2.5 py-0.5 rounded-lg text-xs">
               {preparingOrders.length}
             </span>
           </div>
-          <div className="p-4 overflow-y-auto flex-1">
+          <div className="p-4 overflow-y-auto flex-1 flex flex-col justify-center">
             {preparingOrders.length === 0 ? (
-              <p className="text-xs text-zinc-500 text-center py-12">Nenhum prato em preparo</p>
+              <div className="text-center py-16">
+                <p className="text-xs text-zinc-400 font-medium">Nenhum prato em preparo</p>
+              </div>
             ) : (
               preparingOrders.map((o) => <OrderCard key={o.id} order={o} />)
             )}
           </div>
         </div>
 
-     
-        <div className="bg-zinc-900/60 rounded-2xl border border-zinc-800 flex flex-col min-h-[500px]">
-          <div className="p-4 border-b border-zinc-800 flex justify-between items-center">
-            <h3 className="font-bold text-white text-sm flex items-center gap-2">
+        {/* Coluna 3: Prontos para Coleta */}
+        <div className="bg-zinc-50/50 rounded-2xl border border-zinc-200/60 flex flex-col min-h-[520px] shadow-card">
+          <div className="p-4 border-b border-zinc-200/60 flex justify-between items-center bg-white rounded-t-2xl">
+            <h3 className="font-black text-zinc-900 text-sm flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
               <span>Prontos para Coleta</span>
             </h3>
-            <span className="bg-zinc-800 text-zinc-300 font-bold px-2.5 py-0.5 rounded-lg text-xs">
+            <span className="bg-emerald-50 text-emerald-600 border border-emerald-200 font-black px-2.5 py-0.5 rounded-lg text-xs">
               {readyOrders.length}
             </span>
           </div>
-          <div className="p-4 overflow-y-auto flex-1">
+          <div className="p-4 overflow-y-auto flex-1 flex flex-col justify-center">
             {readyOrders.length === 0 ? (
-              <p className="text-xs text-zinc-500 text-center py-12">Nenhum pedido aguardando coleta</p>
+              <div className="text-center py-16">
+                <p className="text-xs text-zinc-400 font-medium">Nenhum pedido aguardando coleta</p>
+              </div>
             ) : (
               readyOrders.map((o) => <OrderCard key={o.id} order={o} />)
             )}
