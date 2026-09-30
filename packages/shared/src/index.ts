@@ -22,6 +22,11 @@ export type {
   LocationUpdate,
 } from './types/location';
 
+export type {
+  RestaurantDTO,
+  MenuItemDTO,
+} from './types/restaurant';
+
 // WebSocket Event Names (constantes)
 export const WS_EVENTS = {
   // Orders namespace

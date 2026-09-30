@@ -20,9 +20,19 @@ export class RestaurantsService {
     });
   }
 
-  async findAll() {
+  async findAll(query?: string) {
+    const whereClause: any = { isActive: true };
+
+    if (query) {
+      whereClause.OR = [
+        { name: { contains: query, mode: 'insensitive' } },
+        { description: { contains: query, mode: 'insensitive' } },
+        { category: { contains: query, mode: 'insensitive' } },
+      ];
+    }
+
     return this.prisma.restaurant.findMany({
-      where: { isActive: true },
+      where: whereClause,
       include: {
         owner: {
           select: { id: true, name: true },

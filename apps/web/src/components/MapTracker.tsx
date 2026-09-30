@@ -55,13 +55,13 @@ export const MapTracker: React.FC<MapTrackerProps> = ({
     const restaurantIcon = L.divIcon({
       className: 'custom-map-icon',
       html: `
-        <div class="relative flex items-center justify-center w-10 h-10 bg-amber-500 text-slate-950 font-bold rounded-2xl shadow-xl shadow-amber-500/30 border-2 border-amber-300">
+        <div class="relative flex items-center justify-center w-10 h-10 bg-amber-500 text-zinc-950 font-bold rounded-2xl shadow-xl shadow-amber-500/30 border-2 border-amber-300">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 3v18h18"/>
             <path d="M7 10h8"/>
             <path d="M7 14h5"/>
           </svg>
-          <span class="absolute -bottom-5 left-1/2 -translate-x-1/2 bg-slate-900/90 text-amber-300 text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap border border-amber-500/30">Restaurante</span>
+          <span class="absolute -bottom-5 left-1/2 -tranzinc-x-1/2 bg-zinc-900/90 text-amber-300 text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap border border-amber-500/30">Restaurante</span>
         </div>
       `,
       iconSize: [40, 40],
@@ -76,12 +76,12 @@ export const MapTracker: React.FC<MapTrackerProps> = ({
     const customerIcon = L.divIcon({
       className: 'custom-map-icon',
       html: `
-        <div class="relative flex items-center justify-center w-10 h-10 bg-emerald-500 text-slate-950 font-bold rounded-2xl shadow-xl shadow-emerald-500/30 border-2 border-emerald-300">
+        <div class="relative flex items-center justify-center w-10 h-10 bg-emerald-500 text-zinc-950 font-bold rounded-2xl shadow-xl shadow-emerald-500/30 border-2 border-emerald-300">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
             <polyline points="9 22 9 12 15 12 15 22"/>
           </svg>
-          <span class="absolute -bottom-5 left-1/2 -translate-x-1/2 bg-slate-900/90 text-emerald-300 text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap border border-emerald-500/30">Seu Endereço</span>
+          <span class="absolute -bottom-5 left-1/2 -tranzinc-x-1/2 bg-zinc-900/90 text-emerald-300 text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap border border-emerald-500/30">Seu Endereço</span>
         </div>
       `,
       iconSize: [40, 40],
@@ -142,7 +142,7 @@ export const MapTracker: React.FC<MapTrackerProps> = ({
             </svg>
           </div>
           
-          <span class="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-orange-950/90 text-orange-200 text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap border border-orange-500/40 shadow">
+          <span class="absolute -bottom-6 left-1/2 -tranzinc-x-1/2 bg-orange-950/90 text-orange-200 text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap border border-orange-500/40 shadow">
             Entregador GPS
           </span>
         </div>
@@ -186,24 +186,24 @@ export const MapTracker: React.FC<MapTrackerProps> = ({
   const etaMinutes = Math.max(1, Math.ceil(distance / 250)); // ~15km/h na cidade
 
   return (
-    <div className="relative w-full h-[460px] rounded-2xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-900">
+    <div className="relative w-full h-[460px] rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl bg-zinc-900">
       {/* Container Leaflet */}
       <div ref={mapContainerRef} className="w-full h-full" />
 
       {/* Floating HUD Telemetria no Mapa */}
-      <div className="absolute top-4 left-4 z-[1000] bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-xl p-3 text-xs shadow-xl flex items-center gap-4">
+      <div className="absolute top-4 left-4 z-[1000] bg-zinc-900/90 backdrop-blur-md border border-zinc-700/80 rounded-xl p-3 text-xs shadow-xl flex items-center gap-4">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
-          <span className="font-semibold text-slate-200">GPS Ativo (Redis Cache)</span>
+          <span className="font-semibold text-zinc-200">GPS Ativo (Redis Cache)</span>
         </div>
-        <div className="h-4 w-px bg-slate-700"></div>
+        <div className="h-4 w-px bg-zinc-700"></div>
         <div>
-          <span className="text-slate-400">Distância: </span>
+          <span className="text-zinc-400">Distância: </span>
           <span className="font-bold text-orange-400">{distance}m</span>
         </div>
-        <div className="h-4 w-px bg-slate-700"></div>
+        <div className="h-4 w-px bg-zinc-700"></div>
         <div>
-          <span className="text-slate-400">Previsão: </span>
+          <span className="text-zinc-400">Previsão: </span>
           <span className="font-bold text-emerald-400">~{etaMinutes} min</span>
         </div>
       </div>

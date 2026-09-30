@@ -11,6 +11,7 @@ import {
   Sparkles,
   CheckCircle2,
   Info,
+  ChevronLeft,
 } from 'lucide-react';
 import { MenuItemCard, MenuItem } from '../components/MenuItemCard';
 import { CartDrawer, CartItem } from '../components/CartDrawer';
@@ -66,7 +67,8 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
 }) => {
   const { isAuthenticated, quickLogin } = useAuth();
 
-  // Estados do Cardápio
+  // Estados do Cardápio & Restaurante
+  const [restaurant, setRestaurant] = useState<any>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loadingMenu, setLoadingMenu] = useState(true);
   const [menuError, setMenuError] = useState<string | null>(null);
@@ -80,7 +82,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
-  // Carregar itens do cardápio real da API
+  // Carregar dados do restaurante e cardápio
   useEffect(() => {
     if (!restaurantId) {
       setLoadingMenu(false);
@@ -91,11 +93,15 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
     setLoadingMenu(true);
     setMenuError(null);
 
-    apiFetch<MenuItem[]>(`/api/v1/menu/restaurant/${restaurantId}`)
-      .then((data) => {
+    Promise.all([
+      apiFetch<any>(`/api/v1/restaurants/${restaurantId}`),
+      apiFetch<MenuItem[]>(`/api/v1/menu/restaurant/${restaurantId}`)
+    ])
+      .then(([restData, menuData]) => {
         if (isMounted) {
-          if (Array.isArray(data) && data.length > 0) {
-            setMenuItems(data);
+          setRestaurant(restData);
+          if (Array.isArray(menuData) && menuData.length > 0) {
+            setMenuItems(menuData);
           } else {
             setMenuItems([]);
           }
@@ -103,7 +109,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
       })
       .catch((err) => {
         if (isMounted) {
-          console.error('Erro ao buscar cardápio:', err);
+          console.error('Erro ao buscar dados do restaurante:', err);
           setMenuError('Não foi possível carregar os pratos no momento.');
         }
       })
@@ -157,7 +163,8 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
     return acc + price * curr.quantity;
   }, 0);
 
-  const grandTotal = subtotal > 0 ? subtotal + DELIVERY_FEE : 0;
+  const deliveryFee = restaurant ? Number(restaurant.deliveryFee) : 5.0;
+  const grandTotal = subtotal > 0 ? subtotal + deliveryFee : 0;
 
   const handleConfirmOrder = async () => {
     if (cart.length === 0) return;
@@ -208,11 +215,11 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                 Rastreamento em Tempo Real
               </div>
               <h2 className="text-2xl md:text-3xl font-black text-zinc-900 tracking-tight">
-                Restaurante Paraisópolis
+                {restaurant?.name || 'Restaurante Parceiro'}
               </h2>
               <p className="text-xs text-zinc-400 flex items-center gap-1.5 mt-1">
                 <MapPin className="w-3.5 h-3.5 text-brand-500" />
-                <span>Destino: Praça Cel. José Vieira, Centro, Paraisópolis - MG</span>
+                <span>Destino: {restaurant?.address || 'Paraisópolis - MG'}</span>
               </p>
             </div>
 
@@ -291,7 +298,10 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
           {/* Mapa do Leaflet */}
           <div className="rounded-2xl overflow-hidden border border-zinc-200 shadow-card h-[380px] mb-6">
             <MapTracker
-              restaurantLocation={restaurantLocation}
+              restaurantLocation={{
+                lat: restaurant?.latitude || restaurantLocation.lat,
+                lng: restaurant?.longitude || restaurantLocation.lng,
+              }}
               customerLocation={customerLocation}
               driverLocation={driverLocation}
               orderStatus={orderStatus}
@@ -323,36 +333,48 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
   // TELA PRINCIPAL: Cardápio com Visual Comercial de Alto Padrão
   return (
     <div className="flex flex-col gap-6 max-w-6xl mx-auto w-full pb-32 animate-fadeIn">
+      {/* Botão Voltar */}
+      {onResetOrder && (
+        <button
+          onClick={onResetOrder}
+          className="self-start flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-zinc-900 transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Voltar para Restaurantes
+        </button>
+      )}
+
       {/* Banner Principal do Restaurante */}
       <div className="relative rounded-3xl overflow-hidden border border-zinc-200/60 bg-white shadow-card">
         {/* Capa Fotográfica */}
-        <div className="relative h-48 md:h-56 w-full overflow-hidden bg-zinc-100">
+        <div className="relative h-48 md:h-56 w-full overflow-hidden bg-zinc-900">
           <img
-            src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80"
-            alt="Capa Restaurante Paraisópolis"
+            src={restaurant?.imageUrl || "/images/restaurants/burger.jpg"}
+            alt={`Capa ${restaurant?.name || 'Restaurante'}`}
             className="w-full h-full object-cover scale-105"
-            referrerPolicy="no-referrer"
             onError={(e) => {
-              (e.target as HTMLImageElement).style.display = 'none';
+              if (!e.currentTarget.src.endsWith('/images/restaurants/burger.jpg')) {
+                e.currentTarget.src = '/images/restaurants/burger.jpg';
+              }
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-white via-white/30 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
         </div>
 
         {/* Informações Sobrepostas do Restaurante */}
         <div className="relative px-6 pb-6 pt-2 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="flex items-start md:items-center gap-4">
-            {/* Logo do Restaurante (Monograma Tipográfico Profissional) */}
+            {/* Logo do Restaurante */}
             <div className="-mt-14 md:-mt-16 w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-white border-4 border-white shadow-card-hover overflow-hidden flex items-center justify-center flex-shrink-0">
               <span className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-tr from-brand-500 to-amber-400 tracking-tighter">
-                RP
+                {restaurant?.name ? restaurant.name.substring(0, 2).toUpperCase() : 'RP'}
               </span>
             </div>
 
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl md:text-3xl font-black text-zinc-900 tracking-tight">
-                  Restaurante Paraisópolis
+                  {restaurant?.name || 'Restaurante'}
                 </h1>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -360,23 +382,28 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                 </span>
               </div>
               <p className="text-xs text-zinc-500 mt-1">
-                Culinária Mineira • Carnes na Chapa • Lanches Artesanais
+                {restaurant?.description || `${restaurant?.category || 'Culinária'} • Delivery Rápido`}
               </p>
 
               {/* Informações Rápidas */}
               <div className="flex flex-wrap items-center gap-2.5 mt-3 text-xs font-semibold text-zinc-600">
                 <span className="flex items-center gap-1.5 bg-zinc-50 px-3 py-1.5 rounded-xl border border-zinc-200/60 shadow-sm">
                   <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                  <strong className="text-zinc-900">4.9</strong>
+                  <strong className="text-zinc-900">{restaurant?.rating?.toFixed(1) || '5.0'}</strong>
                   <span className="text-zinc-400">(150+ avaliações)</span>
                 </span>
                 <span className="flex items-center gap-1.5 bg-zinc-50 px-3 py-1.5 rounded-xl border border-zinc-200/60 shadow-sm">
                   <Clock className="w-3.5 h-3.5 text-zinc-400" />
-                  <span>30 - 45 min</span>
+                  <span>{restaurant?.deliveryTime || '30 - 45 min'}</span>
                 </span>
                 <span className="flex items-center gap-1.5 bg-zinc-50 px-3 py-1.5 rounded-xl border border-zinc-200/60 shadow-sm">
                   <Bike className="w-3.5 h-3.5 text-brand-500" />
-                  <span>Entrega R$ 5,00</span>
+                  <span>
+                    {Number(restaurant?.deliveryFee) === 0 
+                      ? 'Entrega Grátis' 
+                      : `Entrega R$ ${Number(restaurant?.deliveryFee || 5).toFixed(2).replace('.', ',')}`
+                    }
+                  </span>
                 </span>
               </div>
             </div>
@@ -542,7 +569,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
         onChangeNotes={setNotes}
         paymentMethod={paymentMethod}
         onChangePaymentMethod={setPaymentMethod}
-        deliveryFee={DELIVERY_FEE}
+        deliveryFee={deliveryFee}
         onConfirmOrder={handleConfirmOrder}
         isLoading={isLoading}
         socketConnected={socketConnected}

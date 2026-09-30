@@ -7,6 +7,7 @@ import { DriverView } from './views/DriverView';
 import { OrderHistoryView } from './views/OrderHistoryView';
 import { MenuManagementView } from './views/MenuManagementView';
 import { DashboardView } from './views/DashboardView';
+import { MarketplaceView } from './views/MarketplaceView';
 import { audioSynth } from './utils/audio';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider, useToast } from './contexts/ToastContext';
@@ -113,24 +114,16 @@ function AppContent() {
           if (restaurant?.id) {
             setRestaurantId(restaurant.id);
           }
-        } else {
-          // Cliente/Entregador: busca a lista pública e usa o primeiro
+        } else if (user?.role === 'DRIVER' || user?.role === 'ADMIN') {
+          // por enquanto usa o primeiro restaurante para a fila
           const restaurants = await apiFetch<any[]>('/api/v1/restaurants');
           if (Array.isArray(restaurants) && restaurants.length > 0) {
             setRestaurantId(restaurants[0].id);
           }
         }
+        // não auto-seleciona, pois verá o MarketplaceView primeiro
       } catch (err) {
         console.log('Erro ao buscar restaurantId:', err);
-        // Fallback: se não conseguir buscar, tenta a lista pública
-        try {
-          const restaurants = await apiFetch<any[]>('/api/v1/restaurants');
-          if (Array.isArray(restaurants) && restaurants.length > 0) {
-            setRestaurantId(restaurants[0].id);
-          }
-        } catch {
-          console.error('Não foi possível obter nenhum restaurante');
-        }
       }
     };
 
@@ -150,6 +143,7 @@ function AppContent() {
             createdAt: d.createdAt,
             totalPrice: d.totalPrice,
             notes: d.notes,
+            restaurantId: d.restaurantId,
             customer: d.customer,
             items: d.items,
           }));
@@ -161,8 +155,6 @@ function AppContent() {
 
   // Conexão e sincronização com WebSocket
   useEffect(() => {
-    if (!restaurantId) return;
-
     const socketOptions = token ? { auth: { token } } : {};
     const ordSocket = io(`${API_BASE_URL}/orders`, socketOptions);
     const dlvSocket = io(`${API_BASE_URL}/delivery`, socketOptions);
@@ -172,7 +164,9 @@ function AppContent() {
 
     ordSocket.on('connect', () => {
       setConnected(true);
-      ordSocket.emit('joinRestaurantRoom', { restaurantId });
+      if (restaurantId) {
+        ordSocket.emit('joinRestaurantRoom', { restaurantId });
+      }
       if (currentOrderId) {
         ordSocket.emit('joinOrderRoom', { orderId: currentOrderId });
       }
@@ -188,6 +182,7 @@ function AppContent() {
         createdAt: order.createdAt || new Date().toISOString(),
         totalPrice: order.totalPrice,
         notes: order.notes,
+        restaurantId: order.restaurantId,
         customer: order.customer,
         items: order.items,
       };
@@ -253,8 +248,23 @@ function AppContent() {
     return () => {
       ordSocket.disconnect();
       dlvSocket.disconnect();
+      setConnected(false);
     };
-  }, [token, currentOrderId, restaurantId]);
+  }, [token]);
+
+  // Entrar na room do restaurante quando restaurantId mudar
+  useEffect(() => {
+    if (ordersSocket && connected && restaurantId) {
+      ordersSocket.emit('joinRestaurantRoom', { restaurantId });
+    }
+  }, [ordersSocket, connected, restaurantId]);
+
+  // Entrar na room do pedido quando currentOrderId mudar
+  useEffect(() => {
+    if (ordersSocket && connected && currentOrderId) {
+      ordersSocket.emit('joinOrderRoom', { orderId: currentOrderId });
+    }
+  }, [ordersSocket, connected, currentOrderId]);
 
   // Criar pedido
   const handleCreateOrder = async (
@@ -291,6 +301,7 @@ function AppContent() {
         createdAt: data.createdAt || new Date().toISOString(),
         totalPrice: data.totalPrice,
         notes: data.notes,
+        restaurantId: data.restaurantId || restaurantId,
         customer: data.customer || (user ? { id: user.id, name: user.name, phone: user.phone } : undefined),
         items: data.items,
       };
@@ -437,7 +448,11 @@ function AppContent() {
 
         {/* Views */}
         <main>
-          {currentRole === 'CUSTOMER' && (
+          {currentRole === 'CUSTOMER' && !restaurantId && !activeCustomerOrder && (
+            <MarketplaceView onSelectRestaurant={(id) => setRestaurantId(id)} />
+          )}
+
+          {currentRole === 'CUSTOMER' && (restaurantId || activeCustomerOrder) && (
             <CustomerView
               socketConnected={connected}
               orderStatus={activeCustomerOrder?.status || null}
@@ -447,8 +462,11 @@ function AppContent() {
               customerLocation={CUSTOMER_LOC}
               onCreateOrder={handleCreateOrder}
               isLoading={isLoading}
-              onResetOrder={() => setCurrentOrderId(null)}
-              restaurantId={restaurantId}
+              onResetOrder={() => {
+                setCurrentOrderId(null);
+                setRestaurantId(null);
+              }}
+              restaurantId={activeCustomerOrder?.restaurantId || restaurantId}
             />
           )}
 

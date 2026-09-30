@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Query } from '@nestjs/common';
 import { RestaurantsService } from './restaurants.service';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -23,8 +23,16 @@ export class RestaurantsController {
 
   // Endpoint público 
   @Get()
-  async findAll() {
-    return this.restaurantsService.findAll();
+  async findAll(@Query('q') query?: string) {
+    return this.restaurantsService.findAll(query);
+  }
+
+  // owner
+  @Get('my/restaurant')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.RESTAURANT_OWNER)
+  async getMyRestaurant(@CurrentUser('userId') userId: string) {
+    return this.restaurantsService.findByOwnerId(userId);
   }
 
   @Get(':id')
@@ -43,11 +51,5 @@ export class RestaurantsController {
     return this.restaurantsService.create(userId, dto);
   }
 
-  // Restaurante do owner logado
-  @Get('my/restaurant')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.RESTAURANT_OWNER)
-  async getMyRestaurant(@CurrentUser('userId') userId: string) {
-    return this.restaurantsService.findByOwnerId(userId);
-  }
+
 }

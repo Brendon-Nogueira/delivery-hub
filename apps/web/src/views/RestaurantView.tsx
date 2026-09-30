@@ -22,6 +22,7 @@ export interface Order {
   createdAt: string;
   totalPrice?: number | string;
   notes?: string;
+  restaurantId?: string;
   customer?: {
     id: string;
     name: string;
