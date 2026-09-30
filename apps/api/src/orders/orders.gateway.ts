@@ -7,10 +7,11 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
-import { Logger, UseGuards } from '@nestjs/common';
+import { Logger, UseGuards, Inject, forwardRef } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { OrderStatus, WS_EVENTS } from '@delivery-hub/shared';
+import { OrdersService } from './orders.service';
 
 /**
  * OrdersGateway — WebSocket Gateway para pedidos em tempo real.
@@ -53,7 +54,10 @@ export class OrdersGateway
 
   private readonly logger = new Logger(OrdersGateway.name);
 
-  constructor(private readonly jwtService: JwtService) { }
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly ordersService: OrdersService,
+  ) { }
 
   /**
    * handleConnection — Chamado quando um cliente conecta ao namespace /orders.
@@ -154,31 +158,34 @@ export class OrdersGateway
   async handleUpdateOrderStatus(
     @ConnectedSocket() client: Socket,
     @MessageBody()
-    data: { orderId: string; status: OrderStatus; note?: string },
+    data: { orderId: string; status: OrderStatus | string; note?: string },
   ) {
-    // Emite para todos na room do pedido (cliente + restaurante + entregador)
-    this.server.to(`order:${data.orderId}`).emit(WS_EVENTS.ORDER_STATUS_CHANGED, {
-      orderId: data.orderId,
-      status: data.status,
-      note: data.note,
-      updatedBy: client.data.user?.email,
-      updatedAt: new Date().toISOString(),
-    });
+    try {
+      // atualiza via OrdersService!
+      const updatedOrder = await this.ordersService.updateStatus(
+        data.orderId,
+        data.status as any,
+        data.note,
+      );
 
-    // Broadcast para todos os clientes conectados (MVP sem rooms obrigatórias)
-    this.server.emit(WS_EVENTS.ORDER_STATUS_CHANGED, {
-      orderId: data.orderId,
-      status: data.status,
-      note: data.note,
-      updatedBy: client.data.user?.email,
-      updatedAt: new Date().toISOString(),
-    });
+      // Transmite via WebSocket em tempo real para os clientes (uma única emissão global)
+      this.server.emit(WS_EVENTS.ORDER_STATUS_CHANGED, {
+        orderId: data.orderId,
+        status: updatedOrder.status,
+        note: data.note,
+        updatedBy: client.data?.user?.email,
+        updatedAt: new Date().toISOString(),
+      });
 
-    this.logger.log(
-      `Status: ${data.orderId} → ${data.status} (por ${client.data.user?.email})`,
-    );
+      this.logger.log(
+        `Status persistido e emitido: ${data.orderId} → ${updatedOrder.status} (por ${client.data?.user?.email || 'anônimo'})`,
+      );
 
-    return { event: 'statusUpdated', data: { success: true } };
+      return { event: 'statusUpdated', data: { success: true, status: updatedOrder.status } };
+    } catch (error: any) {
+      this.logger.error(`Erro ao atualizar status do pedido ${data.orderId}: ${error.message}`);
+      return { event: 'statusUpdateError', data: { success: false, message: error.message } };
+    }
   }
 
   // ─── Métodos chamados pelo OrdersController (REST → WS bridge) ───
@@ -188,14 +195,12 @@ export class OrdersGateway
    * Chamado pelo OrdersController.create() após persistir via REST.
    */
   emitNewOrder(restaurantId: string, order: any) {
-    this.server.to(`restaurant:${restaurantId}`).emit(WS_EVENTS.ORDER_NEW, order);
-    // Broadcast geral para o MVP
     this.server.emit(WS_EVENTS.ORDER_NEW, order);
     this.logger.log(`Novo pedido emitido para restaurant:${restaurantId}`);
   }
 
   /**
-   * Emite mudança de status para a room do pedido.
+   * Emite mudança de status para os clientes.
    * Chamado pelo OrdersController.updateStatus() após persistir via REST.
    */
   emitOrderStatusChanged(
@@ -203,7 +208,7 @@ export class OrdersGateway
     status: OrderStatus,
     note?: string,
   ) {
-    this.server.to(`order:${orderId}`).emit(WS_EVENTS.ORDER_STATUS_CHANGED, {
+    this.server.emit(WS_EVENTS.ORDER_STATUS_CHANGED, {
       orderId,
       status,
       note,

@@ -31,6 +31,7 @@ interface CustomerViewProps {
   onCreateOrder: (items: Array<{ menuItemId: string; quantity: number }>, notes?: string) => Promise<void>;
   isLoading: boolean;
   onResetOrder?: () => void;
+  restaurantId: string | null;
 }
 
 const statusMessages: Record<OrderStatus, string> = {
@@ -61,6 +62,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
   onCreateOrder,
   isLoading,
   onResetOrder,
+  restaurantId,
 }) => {
   const { isAuthenticated, quickLogin } = useAuth();
 
@@ -80,11 +82,16 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
 
   // Carregar itens do cardápio real da API
   useEffect(() => {
+    if (!restaurantId) {
+      setLoadingMenu(false);
+      return;
+    }
+
     let isMounted = true;
     setLoadingMenu(true);
     setMenuError(null);
 
-    apiFetch<MenuItem[]>('/api/v1/menu/restaurant/rest-123')
+    apiFetch<MenuItem[]>(`/api/v1/menu/restaurant/${restaurantId}`)
       .then((data) => {
         if (isMounted) {
           if (Array.isArray(data) && data.length > 0) {
@@ -107,7 +114,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [restaurantId]);
 
   // Handlers do Carrinho
   const handleAddToCart = (item: MenuItem) => {

@@ -45,7 +45,9 @@ type OrderStatus =
   | 'IN_TRANSIT'
   | 'DELIVERED'
   | 'CANCELLED'
-  | 'REJECTED';
+  | 'REJECTED'
+  | 'READY'
+  | 'ON_THE_WAY';
 
 interface HistoryOrder {
   id: string;
@@ -65,7 +67,17 @@ type FilterTab = 'all' | 'active' | 'completed' | 'cancelled';
 
 // Helpers de status
 const isActiveStatus = (s: OrderStatus) =>
-  ['PENDING', 'ACCEPTED', 'CONFIRMED', 'PREPARING', 'READY_FOR_PICKUP', 'PICKED_UP', 'IN_TRANSIT'].includes(s);
+  [
+    'PENDING',
+    'ACCEPTED',
+    'CONFIRMED',
+    'PREPARING',
+    'READY_FOR_PICKUP',
+    'PICKED_UP',
+    'IN_TRANSIT',
+    'READY',
+    'ON_THE_WAY',
+  ].includes(s);
 
 const isCompletedStatus = (s: OrderStatus) => s === 'DELIVERED';
 const isCancelledStatus = (s: OrderStatus) => ['CANCELLED', 'REJECTED'].includes(s);
@@ -76,8 +88,10 @@ const statusConfig: Record<string, { label: string; color: string; bgColor: stri
   CONFIRMED: { label: 'Confirmado', color: 'text-sky-700', bgColor: 'bg-sky-50', borderColor: 'border-sky-200' },
   PREPARING: { label: 'Preparando', color: 'text-blue-700', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
   READY_FOR_PICKUP: { label: 'Pronto', color: 'text-indigo-700', bgColor: 'bg-indigo-50', borderColor: 'border-indigo-200' },
+  READY: { label: 'Pronto', color: 'text-indigo-700', bgColor: 'bg-indigo-50', borderColor: 'border-indigo-200' },
   PICKED_UP: { label: 'Coletado', color: 'text-violet-700', bgColor: 'bg-violet-50', borderColor: 'border-violet-200' },
   IN_TRANSIT: { label: 'A Caminho', color: 'text-orange-700', bgColor: 'bg-orange-50', borderColor: 'border-orange-200' },
+  ON_THE_WAY: { label: 'A Caminho', color: 'text-orange-700', bgColor: 'bg-orange-50', borderColor: 'border-orange-200' },
   DELIVERED: { label: 'Entregue', color: 'text-emerald-700', bgColor: 'bg-emerald-50', borderColor: 'border-emerald-200' },
   CANCELLED: { label: 'Cancelado', color: 'text-rose-700', bgColor: 'bg-rose-50', borderColor: 'border-rose-200' },
   REJECTED: { label: 'Recusado', color: 'text-rose-700', bgColor: 'bg-rose-50', borderColor: 'border-rose-200' },
@@ -136,6 +150,22 @@ export const OrderHistoryView: React.FC = () => {
     const cleanup = fetchOrders();
     return cleanup;
   }, [isAuthenticated]);
+
+  //atualizações de status em tempo real via WebSocket/evento
+  useEffect(() => {
+    const handleStatusChanged = (e: Event) => {
+      const customEvent = e as CustomEvent<{ orderId: string; status: string; frontendStatus?: string }>;
+      const { orderId, status } = customEvent.detail;
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, status: status as OrderStatus } : o))
+      );
+    };
+
+    window.addEventListener('order:status-changed', handleStatusChanged);
+    return () => {
+      window.removeEventListener('order:status-changed', handleStatusChanged);
+    };
+  }, []);
 
   // Filtrar pedidos por aba
   const filteredOrders = useMemo(() => {

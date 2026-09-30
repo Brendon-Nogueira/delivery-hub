@@ -1,11 +1,12 @@
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 import { OrderStatus } from '@delivery-hub/shared';
 
 export class UpdateOrderStatusDto {
-  @IsEnum(OrderStatus)
+  @IsString()
   status: OrderStatus;
 
   @IsOptional()
   @IsString()
   note?: string;
 }
+

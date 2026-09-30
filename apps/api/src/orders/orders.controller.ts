@@ -4,8 +4,10 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { OrdersGateway } from './orders.gateway';
-import { OrderStatus } from '@delivery-hub/shared';
+import { OrderStatus, UserRole } from '@delivery-hub/shared';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 
 /**
  * OrdersController — Endpoints REST para pedidos.
@@ -46,6 +48,17 @@ export class OrdersController {
   @UseGuards(JwtAuthGuard)
   async getMyOrders(@CurrentUser('userId') userId: string) {
     return this.ordersService.findByCustomer(userId);
+  }
+
+  /**
+   * Endpoint Private.
+   * Apenas o RESTAURANT_OWNER tem permissão para visualizar métricas do seu restaurante.
+   */
+  @Get('restaurant/:restaurantId/stats')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.RESTAURANT_OWNER)
+  async getRestaurantStats(@Param('restaurantId') restaurantId: string) {
+    return this.ordersService.getRestaurantStats(restaurantId);
   }
 
   @Get('restaurant/:restaurantId')

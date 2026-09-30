@@ -43,13 +43,19 @@ type ToastAction =
   | { type: 'ADD'; toast: Toast }
   | { type: 'REMOVE'; id: string };
 
-// Reducer: função pura que gerencia o estado
 function toastReducer(state: Toast[], action: ToastAction): Toast[] {
   switch (action.type) {
-    case 'ADD':
+    case 'ADD': {
+      // Evita toasts duplicados 
+      const isDuplicate = state.some(
+        (t) => t.title === action.toast.title && t.message === action.toast.message
+      );
+      if (isDuplicate) return state;
+
       // Máximo de 5 toasts simultâneos (remove o mais antigo)
       const newState = [...state, action.toast];
       return newState.length > 5 ? newState.slice(1) : newState;
+    }
     case 'REMOVE':
       return state.filter((t) => t.id !== action.id);
     default:
