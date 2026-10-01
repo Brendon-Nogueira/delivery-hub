@@ -130,6 +130,37 @@ export class OrdersService {
   }
 
   /**
+   * Retorna todos os pedidos prontos para coleta ou em trânsito para entregadores
+   */
+  async findAvailableForDelivery() {
+    return this.prisma.order.findMany({
+      where: {
+        status: {
+          in: [
+            OrderStatus.READY_FOR_PICKUP,
+            OrderStatus.PICKED_UP,
+            OrderStatus.IN_TRANSIT,
+          ],
+        },
+      },
+      include: {
+        customer: { select: { id: true, name: true, phone: true } },
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            address: true,
+            latitude: true,
+            longitude: true,
+          },
+        },
+        items: { include: { menuItem: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /**
    * Padroniza aliases de status comuns para o enum oficial OrderStatus
    */
   private normalizeStatus(rawStatus: OrderStatus | string): OrderStatus {

@@ -57,10 +57,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  const handleQuick = async (roleType: 'CUSTOMER' | 'RESTAURANT' | 'DRIVER') => {
+  const handleQuick = async (roleType: 'CUSTOMER' | 'RESTAURANT' | 'DRIVER', customEmail?: string) => {
     setError(null);
     try {
-      await quickLogin(roleType);
+      await quickLogin(roleType, customEmail);
       onSuccess?.();
       onClose();
     } catch (err: any) {
@@ -254,35 +254,81 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <span>Acesso Rápido para Demonstração:</span>
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2 mb-2">
             <button
               type="button"
               onClick={() => handleQuick('CUSTOMER')}
               disabled={isLoading}
-              className="p-2.5 rounded-xl bg-zinc-50 hover:bg-brand-50 border border-zinc-200 text-center transition hover:border-brand-300 active:scale-95"
+              className="p-2 rounded-xl bg-zinc-50 hover:bg-brand-50 border border-zinc-200 text-left transition hover:border-brand-300 active:scale-95 flex items-center gap-2"
             >
-              <span className="block font-black text-brand-600 text-xs">Cliente</span>
-              <span className="text-[10px] text-zinc-400 font-medium">Conta Demo</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuick('RESTAURANT')}
-              disabled={isLoading}
-              className="p-2.5 rounded-xl bg-zinc-50 hover:bg-amber-50 border border-zinc-200 text-center transition hover:border-amber-300 active:scale-95"
-            >
-              <span className="block font-black text-amber-600 text-xs">Restaurante</span>
-              <span className="text-[10px] text-zinc-400 font-medium">Gestão KDS</span>
+              <div className="w-7 h-7 rounded-lg bg-brand-500 text-white flex items-center justify-center font-black text-xs">
+                C
+              </div>
+              <div>
+                <span className="block font-black text-brand-700 text-xs leading-none">Cliente</span>
+                <span className="text-[10px] text-zinc-400">cliente@teste.com</span>
+              </div>
             </button>
 
             <button
               type="button"
               onClick={() => handleQuick('DRIVER')}
               disabled={isLoading}
-              className="p-2.5 rounded-xl bg-zinc-50 hover:bg-emerald-50 border border-zinc-200 text-center transition hover:border-emerald-300 active:scale-95"
+              className="p-2 rounded-xl bg-zinc-50 hover:bg-emerald-50 border border-zinc-200 text-left transition hover:border-emerald-300 active:scale-95 flex items-center gap-2"
             >
-              <span className="block font-black text-emerald-600 text-xs">Entregador</span>
-              <span className="text-[10px] text-zinc-400 font-medium">App Mobile</span>
+              <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-black text-xs">
+                M
+              </div>
+              <div>
+                <span className="block font-black text-emerald-700 text-xs leading-none">Entregador</span>
+                <span className="text-[10px] text-zinc-400">driver@teste.com</span>
+              </div>
+            </button>
+          </div>
+
+          <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5">
+            Cozinhas / KDS por Restaurante:
+          </div>
+
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              type="button"
+              onClick={() => handleQuick('RESTAURANT', 'dono@sushi-hub.com')}
+              disabled={isLoading}
+              className="p-2 rounded-xl bg-zinc-50 hover:bg-amber-50 border border-zinc-200 text-left transition hover:border-amber-300 active:scale-95"
+            >
+              <span className="block font-black text-zinc-800 text-[11px] leading-tight truncate">🍣 Sushi Hub</span>
+              <span className="text-[9px] text-zinc-400">dono@sushi-hub.com</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleQuick('RESTAURANT', 'dono@restaurante.com')}
+              disabled={isLoading}
+              className="p-2 rounded-xl bg-zinc-50 hover:bg-amber-50 border border-zinc-200 text-left transition hover:border-amber-300 active:scale-95"
+            >
+              <span className="block font-black text-zinc-800 text-[11px] leading-tight truncate">🍔 Smash Burger</span>
+              <span className="text-[9px] text-zinc-400">dono@restaurante.com</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleQuick('RESTAURANT', 'dono@bella-pizza.com')}
+              disabled={isLoading}
+              className="p-2 rounded-xl bg-zinc-50 hover:bg-amber-50 border border-zinc-200 text-left transition hover:border-amber-300 active:scale-95"
+            >
+              <span className="block font-black text-zinc-800 text-[11px] leading-tight truncate">🍕 Bella Pizza</span>
+              <span className="text-[9px] text-zinc-400">dono@bella-pizza.com</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleQuick('RESTAURANT', 'dono@acai-serra.com')}
+              disabled={isLoading}
+              className="p-2 rounded-xl bg-zinc-50 hover:bg-amber-50 border border-zinc-200 text-left transition hover:border-amber-300 active:scale-95"
+            >
+              <span className="block font-black text-zinc-800 text-[11px] leading-tight truncate">🍧 Açaí Serra</span>
+              <span className="text-[9px] text-zinc-400">dono@acai-serra.com</span>
             </button>
           </div>
         </div>

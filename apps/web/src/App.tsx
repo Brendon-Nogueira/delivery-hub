@@ -11,6 +11,8 @@ import { MarketplaceView } from './views/MarketplaceView';
 import { audioSynth } from './utils/audio';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider, useToast } from './contexts/ToastContext';
+import { AddressProvider, useAddress } from './contexts/AddressContext';
+import { AddressModal } from './components/AddressModal';
 import { UserHeader } from './components/UserHeader';
 import { apiFetch, API_BASE_URL } from './utils/api';
 
@@ -82,9 +84,11 @@ function AppContent() {
    */
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
 
-  // Coordenadas fixas (Paraisópolis - MG)
+  const { address } = useAddress();
+  // Coordenadas fixas do Restaurante (Praça Cel. José Vieira - Centro)
   const RESTAURANT_LOC = { lat: -22.5538, lng: -45.7796 };
-  const CUSTOMER_LOC = { lat: -22.548, lng: -45.775 };
+  // Coordenadas reais dinâmicas do Cliente (ViaCEP / OpenStreetMap)
+  const customerLoc = { lat: address.lat, lng: address.lng };
 
   // Auto-select role por perfil do usuário
   useEffect(() => {
@@ -130,13 +134,37 @@ function AppContent() {
     fetchRestaurantId();
   }, [user]);
 
-  // Carregar pedidos iniciais do restaurante (para a view KDS)
+  // Carregar pedidos:
+  // - Se for DRIVER: busca todas as entregas disponíveis na cidade (/api/v1/orders/available-deliveries)
+  // - Se for RESTAURANT / KDS: busca os pedidos do restaurante específico
   useEffect(() => {
+    if (currentRole === 'DRIVER' || user?.role === 'DRIVER') {
+      apiFetch<any[]>('/api/v1/orders/available-deliveries')
+        .then((data) => {
+          if (Array.isArray(data)) {
+            const loaded: RestaurantOrder[] = data.map((d) => ({
+              id: d.id,
+              status: mapToFrontendStatus(d.status),
+              createdAt: d.createdAt,
+              totalPrice: d.totalPrice,
+              notes: d.notes,
+              restaurantId: d.restaurantId,
+              customer: d.customer,
+              items: d.items,
+              restaurant: d.restaurant,
+            }));
+            setOrders(loaded);
+          }
+        })
+        .catch((err) => console.log('Histórico de entregas disponíveis:', err));
+      return;
+    }
+
     if (!restaurantId) return;
 
     apiFetch<any[]>(`/api/v1/orders/restaurant/${restaurantId}`)
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           const loaded: RestaurantOrder[] = data.map((d) => ({
             id: d.id,
             status: mapToFrontendStatus(d.status),
@@ -146,12 +174,13 @@ function AppContent() {
             restaurantId: d.restaurantId,
             customer: d.customer,
             items: d.items,
+            restaurant: d.restaurant,
           }));
           setOrders(loaded);
         }
       })
       .catch((err) => console.log('Histórico inicial:', err));
-  }, [restaurantId]);
+  }, [restaurantId, currentRole, user]);
 
   // Conexão e sincronização com WebSocket
   useEffect(() => {
@@ -208,9 +237,35 @@ function AppContent() {
     // Mudança de status 
     const handleStatusChanged = (data: { orderId: string; status: OrderStatus | string }) => {
       const frontendStatus = mapToFrontendStatus(data.status);
-      setOrders((prev) =>
-        prev.map((o) => (o.id === data.orderId ? { ...o, status: frontendStatus } : o))
-      );
+      setOrders((prev) => {
+        const exists = prev.some((o) => o.id === data.orderId);
+        if (exists) {
+          return prev.map((o) => (o.id === data.orderId ? { ...o, status: frontendStatus } : o));
+        }
+
+        // Se o pedido não estava na lista (ex: nova entrega pronta no app do motorista), busca dados completos e insere
+        if (frontendStatus === 'READY') {
+          apiFetch<any>(`/api/v1/orders/${data.orderId}`)
+            .then((newOrd) => {
+              if (newOrd) {
+                const formatted: RestaurantOrder = {
+                  id: newOrd.id,
+                  status: frontendStatus,
+                  createdAt: newOrd.createdAt,
+                  totalPrice: newOrd.totalPrice,
+                  notes: newOrd.notes,
+                  restaurantId: newOrd.restaurantId,
+                  customer: newOrd.customer,
+                  items: newOrd.items,
+                  restaurant: newOrd.restaurant,
+                };
+                setOrders((current) => [formatted, ...current.filter((o) => o.id !== formatted.id)]);
+              }
+            })
+            .catch((err) => console.log('Erro ao carregar detalhes do novo pedido pronto:', err));
+        }
+        return prev;
+      });
 
       // Toast de mudança de status
       const toastConfig = statusToastMessages[frontendStatus];
@@ -286,12 +341,15 @@ function AppContent() {
         await quickLogin('CUSTOMER');
       }
 
+      const addressHeader = `[Entrega: ${address.formattedAddress}]`;
+      const combinedNotes = notes ? `${addressHeader} • Obs: ${notes}` : addressHeader;
+
       const data = await apiFetch<any>('/api/v1/orders', {
         method: 'POST',
         data: {
           restaurantId,
           items,
-          notes,
+          notes: combinedNotes,
         },
       });
 
@@ -459,7 +517,7 @@ function AppContent() {
               activeOrder={activeCustomerOrder}
               driverLocation={driverLocation}
               restaurantLocation={RESTAURANT_LOC}
-              customerLocation={CUSTOMER_LOC}
+              customerLocation={customerLoc}
               onCreateOrder={handleCreateOrder}
               isLoading={isLoading}
               onResetOrder={() => {
@@ -495,7 +553,7 @@ function AppContent() {
               onCompleteDelivery={handleCompleteDelivery}
               driverLocation={driverLocation}
               restaurantLocation={RESTAURANT_LOC}
-              customerLocation={CUSTOMER_LOC}
+              customerLocation={customerLoc}
             />
           )}
         </main>
@@ -507,19 +565,16 @@ function AppContent() {
 /**
  * CONCEITO: Composição de Providers
  *
- * AuthProvider > ToastProvider > AppContent
- *
- * A ordem importa:
- * - AuthProvider DEVE estar por fora do ToastProvider, porque o login pode
- *   precisar existir antes dos toasts
- * - ToastProvider DEVE envolver AppContent, para que useToast() funcione
- *   em qualquer componente filho
+ * AuthProvider > ToastProvider > AddressProvider > AppContent + AddressModal
  */
 export default function App() {
   return (
     <AuthProvider>
       <ToastProvider>
-        <AppContent />
+        <AddressProvider>
+          <AppContent />
+          <AddressModal />
+        </AddressProvider>
       </ToastProvider>
     </AuthProvider>
   );

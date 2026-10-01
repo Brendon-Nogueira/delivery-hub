@@ -6,10 +6,12 @@ import {
   Minus,
   Trash2,
   CheckCircle2,
+  MapPin,
 } from 'lucide-react';
 import { MenuItem } from './MenuItemCard';
 import { FOOD_VISUAL_MAP } from '../utils/foodImages';
 import { useAuth } from '../contexts/AuthContext';
+import { useAddress } from '../contexts/AddressContext';
 
 export interface CartItem {
   item: MenuItem;
@@ -50,6 +52,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   socketConnected,
 }) => {
   const { isAuthenticated, quickLogin } = useAuth();
+  const { address, openAddressModal, formatAddressSummary } = useAddress();
 
   // Travar o scroll da página enquanto o drawer estiver aberto
   useEffect(() => {
@@ -220,6 +223,33 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Endereço de Entrega Real */}
+              <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200/60 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-600 uppercase tracking-wider">
+                    <MapPin className="w-3.5 h-3.5 text-brand-500" />
+                    <span>Endereço de Entrega</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={openAddressModal}
+                    className="text-[11px] font-bold text-brand-600 hover:text-brand-700 bg-brand-50 hover:bg-brand-100 px-2.5 py-1 rounded-lg transition active:scale-95 border border-brand-200"
+                  >
+                    Alterar
+                  </button>
+                </div>
+
+                <div className="bg-white p-3 rounded-xl border border-zinc-200 text-xs shadow-xs">
+                  <span className="font-bold text-zinc-800 block">
+                    {address.street}, {address.number || 'S/N'}
+                    {address.complement ? ` (${address.complement})` : ''}
+                  </span>
+                  <span className="text-[11px] text-zinc-400 block mt-0.5">
+                    {address.neighborhood} • {address.city} - {address.state} • CEP {address.cep}
+                  </span>
+                </div>
               </div>
 
               {/* Observações */}

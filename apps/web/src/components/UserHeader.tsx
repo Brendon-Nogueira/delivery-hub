@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { ShoppingBag, LogIn, LogOut, MapPin, User, ChevronDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useAddress } from '../contexts/AddressContext';
 import { AuthModal } from './AuthModal';
 
 export const UserHeader: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
+  const { address, openAddressModal, formatAddressSummary } = useAddress();
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'login' | 'register'>('login');
 
@@ -57,18 +59,23 @@ export const UserHeader: React.FC = () => {
         </div>
 
         {/* Localização da Entrega */}
-        <div className="hidden md:flex items-center gap-2.5 text-xs text-zinc-600 bg-zinc-50 px-4 py-2 rounded-xl border border-zinc-200/60 hover:border-zinc-300 transition cursor-default">
-          <div className="w-6 h-6 rounded-lg bg-brand-50 text-brand-500 flex items-center justify-center flex-shrink-0">
+        <button
+          type="button"
+          onClick={openAddressModal}
+          className="hidden md:flex items-center gap-2.5 text-xs text-zinc-600 bg-zinc-50 hover:bg-brand-50/50 px-4 py-2 rounded-xl border border-zinc-200/60 hover:border-brand-300 transition cursor-pointer active:scale-95 group text-left"
+          title="Clique para alterar o endereço de entrega"
+        >
+          <div className="w-6 h-6 rounded-lg bg-brand-50 text-brand-500 group-hover:bg-brand-500 group-hover:text-white flex items-center justify-center flex-shrink-0 transition">
             <MapPin className="w-3.5 h-3.5" />
           </div>
           <div>
             <span className="text-[10px] uppercase font-bold text-zinc-400 block leading-tight">Entregar em</span>
             <span className="font-bold text-zinc-800 truncate max-w-[220px] block">
-              Praça Cel. José Vieira, Centro
+              {formatAddressSummary(address)}
             </span>
           </div>
-          <ChevronDown className="w-3.5 h-3.5 text-zinc-400 ml-1" />
-        </div>
+          <ChevronDown className="w-3.5 h-3.5 text-zinc-400 group-hover:text-brand-500 transition ml-1" />
+        </button>
 
         {/* Área do Usuário */}
         <div className="flex items-center gap-2.5">

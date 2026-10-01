@@ -74,6 +74,11 @@ export class OrdersController {
     return this.ordersService.clearAllOrders(restaurantId);
   }
 
+  @Get('available-deliveries')
+  async getAvailableDeliveries() {
+    return this.ordersService.findAvailableForDelivery();
+  }
+
   @Get(':id')
   async findById(@Param('id') id: string) {
     return this.ordersService.findById(id);

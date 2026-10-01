@@ -8,6 +8,12 @@ interface Order {
   id: string;
   status: OrderStatus;
   createdAt: string;
+  totalPrice?: number | string;
+  notes?: string;
+  restaurantId?: string;
+  customer?: { id?: string; name?: string; phone?: string };
+  restaurant?: { id?: string; name?: string; address?: string };
+  items?: any[];
 }
 
 interface DriverViewProps {
@@ -18,6 +24,12 @@ interface DriverViewProps {
   restaurantLocation: { lat: number; lng: number };
   customerLocation: { lat: number; lng: number };
 }
+
+const extractDeliveryAddress = (notes?: string) => {
+  if (!notes) return 'Centro, Paraisópolis - MG';
+  const match = notes.match(/\[Entrega:\s*(.*?)\]/);
+  return match ? match[1] : notes;
+};
 
 export const DriverView: React.FC<DriverViewProps> = ({ 
   orders, 
@@ -126,8 +138,7 @@ export const DriverView: React.FC<DriverViewProps> = ({
 
               <div className="bg-zinc-50 rounded-xl p-3 mb-4 border border-zinc-200/60">
                 <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mb-0.5">Endereço de Entrega</p>
-                <p className="text-zinc-900 font-bold text-xs">Rua do Cliente, 123</p>
-                <p className="text-zinc-500 text-xs">Centro, Paraisópolis - MG</p>
+                <p className="text-zinc-900 font-bold text-xs">{extractDeliveryAddress(activeDelivery.notes)}</p>
               </div>
 
               <button 
@@ -166,14 +177,14 @@ export const DriverView: React.FC<DriverViewProps> = ({
                   
                   <div className="flex justify-between items-start mb-3 pl-2">
                     <div>
-                      <span className="bg-zinc-100 text-zinc-600 text-[10px] font-bold px-2 py-0.5 rounded-md border border-zinc-200">
-                        Restaurante Paraisópolis
+                      <span className="bg-amber-50 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-md border border-amber-200">
+                        {order.restaurant?.name || 'Restaurante'}
                       </span>
                       <h4 className="font-black text-zinc-900 mt-1.5 text-base">Retirada • #{order.id.split('-')[0]}</h4>
                     </div>
                     <div className="text-right">
                       <span className="text-emerald-600 font-black text-lg">R$ 6,50</span>
-                      <p className="text-zinc-400 text-[11px] font-medium mt-0.5">2.4 km total</p>
+                      <p className="text-zinc-400 text-[11px] font-medium mt-0.5">Corrida no Bairro</p>
                     </div>
                   </div>
                   
@@ -184,8 +195,8 @@ export const DriverView: React.FC<DriverViewProps> = ({
                       <div className="w-2.5 h-2.5 rounded-full bg-brand-500 shadow-sm"></div>
                     </div>
                     <div className="leading-tight">
-                      <p className="mb-2 font-medium text-zinc-700">Praça Cel. José Vieira (Restaurante)</p>
-                      <p className="font-medium text-zinc-700">Rua do Cliente, 123 (Entrega)</p>
+                      <p className="mb-2 font-medium text-zinc-700">{order.restaurant?.name || 'Restaurante'} (Retirada)</p>
+                      <p className="font-medium text-zinc-700 truncate max-w-[260px]">{extractDeliveryAddress(order.notes)} (Entrega)</p>
                     </div>
                   </div>
 

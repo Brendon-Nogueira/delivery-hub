@@ -29,6 +29,13 @@ export interface Order {
     phone?: string;
   };
   items?: OrderItemDetail[];
+  restaurant?: {
+    id?: string;
+    name: string;
+    address?: string;
+    latitude?: number;
+    longitude?: number;
+  };
 }
 
 interface RestaurantViewProps {

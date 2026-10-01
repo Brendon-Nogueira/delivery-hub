@@ -24,7 +24,7 @@ interface AuthContextData {
   login: (email: string, password: string) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
-  quickLogin: (role: 'CUSTOMER' | 'RESTAURANT' | 'DRIVER') => Promise<void>;
+  quickLogin: (role: 'CUSTOMER' | 'RESTAURANT' | 'DRIVER', customEmail?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -83,14 +83,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   
-  const quickLogin = async (role: 'CUSTOMER' | 'RESTAURANT' | 'DRIVER') => {
+  const quickLogin = async (role: 'CUSTOMER' | 'RESTAURANT' | 'DRIVER', customEmail?: string) => {
     const credentials = {
       CUSTOMER: { email: 'cliente@teste.com', pass: '123456' },
       RESTAURANT: { email: 'dono@restaurante.com', pass: '123456' },
       DRIVER: { email: 'driver@teste.com', pass: '123456' },
     }[role];
 
-    await login(credentials.email, credentials.pass);
+    const emailToUse = customEmail || credentials.email;
+    await login(emailToUse, credentials.pass);
   };
 
   return (
