@@ -12,6 +12,23 @@ export interface MenuItem {
   isAvailable: boolean;
 }
 
+const CATEGORY_DEFAULT_IMAGE: Record<string, string> = {
+  'Combinados': '/images/products/sushi/combinado-30-pecas.jpg',
+  'Temakis': '/images/products/sushi/temaki-salmao.jpg',
+  'Pokes': '/images/products/sushi/poke-salmao.jpg',
+  'Hot Rolls': '/images/products/sushi/hot-roll-camarao.jpg',
+  'Lanches': '/images/products/burger/smash-mantiqueira.jpg',
+  'Acompanhamentos': '/images/products/burger/batata-rustica.jpg',
+  'Pizzas Tradicionais': '/images/products/pizza/margherita.jpg',
+  'Pizzas Especiais': '/images/products/pizza/quatro-queijos.jpg',
+  'Pizzas Doces': '/images/products/pizza/nutella-morango.jpg',
+  'Açaí': '/images/products/acai/tigela-acai.jpg',
+  'Milkshakes': '/images/products/acai/milkshake-morango-oreo.jpg',
+  'Doces': '/images/products/acai/bolo-cenoura.jpg',
+  'Sobremesas': '/images/products/acai/pudim-leite.jpg',
+  'Bebidas': '/images/products/sushi/agua-de-coco.jpg',
+};
+
 interface MenuItemCardProps {
   item: MenuItem;
   quantityInCart: number;
@@ -35,12 +52,13 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({
   const decimalPart = priceParts[1];
 
   const visualMeta = FOOD_VISUAL_MAP[item.id];
+  const categoryFallback = CATEGORY_DEFAULT_IMAGE[item.category] || '/images/restaurants/burger.jpg';
   const resolvedImageUrl = fallbackTried
-    ? visualMeta?.fallbackUrl || item.imageUrl
-    : item.imageUrl || visualMeta?.fallbackUrl;
+    ? visualMeta?.fallbackUrl || categoryFallback
+    : item.imageUrl || visualMeta?.fallbackUrl || categoryFallback;
 
   const handleImageError = () => {
-    if (!fallbackTried && visualMeta?.fallbackUrl && visualMeta.fallbackUrl !== item.imageUrl) {
+    if (!fallbackTried) {
       setFallbackTried(true);
     } else {
       setImgError(true);
@@ -82,26 +100,24 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({
               loading="lazy"
               onLoad={() => setImgLoaded(true)}
               onError={handleImageError}
-              className={`h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+              className={`h-full w-full object-cover transition-all duration-500 group-hover:scale-105 ${
                 imgLoaded ? 'opacity-100' : 'opacity-0'
               }`}
             />
             {!imgLoaded && (
-              <div className="absolute inset-0 bg-zinc-100 animate-pulse flex items-center justify-center">
-                <span className="text-xs text-zinc-400 font-medium">Carregando imagem...</span>
-              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-zinc-100 via-zinc-200/60 to-zinc-100 animate-pulse" />
             )}
           </>
         ) : (
-          <div
-            className="h-full w-full flex flex-col items-center justify-center bg-gradient-to-br from-zinc-50 via-zinc-100 to-zinc-50 p-6 text-center relative overflow-hidden"
-          >
-            <div className="w-14 h-14 rounded-2xl bg-white border border-zinc-200 flex items-center justify-center text-sm font-black text-brand-500 mb-2 shadow-sm">
-              {item.name.slice(0, 2).toUpperCase()}
+          <div className="relative h-full w-full overflow-hidden bg-zinc-900">
+            <img
+              src={categoryFallback}
+              alt={item.name}
+              className="h-full w-full object-cover opacity-80"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end p-3">
+              <span className="text-xs font-bold text-white line-clamp-1">{item.name}</span>
             </div>
-            <span className="text-xs font-semibold text-zinc-500 tracking-wide line-clamp-1">
-              {item.name}
-            </span>
           </div>
         )}
 

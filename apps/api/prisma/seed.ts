@@ -119,7 +119,7 @@ async function main() {
       description: 'Dois burgers artesanais 90g, cheddar inglês derretido, cebola caramelizada no vinho e maionese defumada no pão brioche.',
       price: 34.90,
       category: 'Lanches',
-      imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&auto=format&fit=crop',
+      imageUrl: '/images/products/burger/smash-mantiqueira.jpg',
     },
     {
       id: 'item-2',
@@ -127,7 +127,7 @@ async function main() {
       description: 'Hambúrguer 150g, queijo prato, presunto, bacon, ovo caipira, alface, tomate e milho verde.',
       price: 28.90,
       category: 'Lanches',
-      imageUrl: 'https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=600&auto=format&fit=crop',
+      imageUrl: '/images/products/burger/x-tudo.jpg',
     },
     {
       id: 'item-3',
@@ -135,7 +135,7 @@ async function main() {
       description: '500g de batatas rústicas douradas temperadas com alecrim fresco, flor de sal e alho confit.',
       price: 22.00,
       category: 'Acompanhamentos',
-      imageUrl: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=600&auto=format&fit=crop',
+      imageUrl: '/images/products/burger/batata-rustica.jpg',
     },
     {
       id: 'item-4',
@@ -143,7 +143,7 @@ async function main() {
       description: 'Anéis de cebola com empanado crocante e molho barbecue defumado. Porção com 8 unidades.',
       price: 18.00,
       category: 'Acompanhamentos',
-      imageUrl: 'https://images.unsplash.com/photo-1639024471287-032f66e5f1b5?w=600&auto=format&fit=crop',
+      imageUrl: '/images/products/burger/onion-rings.jpg',
     },
     {
       id: 'item-5',
@@ -151,7 +151,7 @@ async function main() {
       description: 'Milkshake cremoso de Nutella com chantilly e raspas de chocolate meio amargo. 500ml.',
       price: 24.00,
       category: 'Bebidas',
-      imageUrl: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=600&auto=format&fit=crop',
+      imageUrl: '/images/products/burger/milkshake-avela.jpg',
     },
     {
       id: 'item-6',
@@ -159,7 +159,7 @@ async function main() {
       description: 'Lata 350ml bem gelada. Opções: Coca-Cola, Guaraná Antarctica, Sprite.',
       price: 6.00,
       category: 'Bebidas',
-      imageUrl: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=600&auto=format&fit=crop',
+      imageUrl: '/images/products/burger/refrigerante.jpg',
     },
   ];
 
@@ -198,7 +198,7 @@ async function main() {
       description: 'Molho San Marzano, mozarella de búfala, manjericão fresco e azeite de oliva extra virgem. Borda recheada.',
       price: 52.90,
       category: 'Pizzas Tradicionais',
-      imageUrl: '/images/restaurants/pizza.jpg',
+      imageUrl: '/images/products/pizza/margherita.jpg',
     },
     {
       id: 'pizza-2',
@@ -206,7 +206,7 @@ async function main() {
       description: 'Generosa quantidade de calabresa defumada fatiada, cebola roxa, azeitonas e orégano.',
       price: 48.90,
       category: 'Pizzas Tradicionais',
-      imageUrl: '/images/restaurants/pizza.jpg',
+      imageUrl: '/images/products/pizza/calabresa.jpg',
     },
     {
       id: 'pizza-3',
@@ -214,7 +214,7 @@ async function main() {
       description: 'Mozarella, gorgonzola suave, parmesão ralado e provolone derretido. Finalizada com mel de abelha.',
       price: 58.90,
       category: 'Pizzas Especiais',
-      imageUrl: '/images/restaurants/pizza.jpg',
+      imageUrl: '/images/products/pizza/quatro-queijos.jpg',
     },
     {
       id: 'pizza-4',
@@ -222,7 +222,7 @@ async function main() {
       description: 'Pizza doce com Nutella, morangos frescos, chantilly e açúcar de baunilha. A favorita!',
       price: 44.90,
       category: 'Pizzas Doces',
-      imageUrl: '/images/restaurants/pizza.jpg',
+      imageUrl: '/images/products/pizza/nutella-morango.jpg',
     },
     {
       id: 'pizza-5',
@@ -230,7 +230,7 @@ async function main() {
       description: 'Suco de uva integral natural integral, sem adição de açúcar. Bem gelado.',
       price: 11.00,
       category: 'Bebidas',
-      imageUrl: '/images/restaurants/pizza.jpg',
+      imageUrl: '/images/products/pizza/suco-uva.jpg',
     },
   ];
 
@@ -268,7 +268,7 @@ async function main() {
       description: 'Açaí puro da Amazônia, banana caramelizada, granola crocante, mel e leite condensado.',
       price: 26.90,
       category: 'Açaí',
-      imageUrl: '/images/restaurants/acai.jpg',
+      imageUrl: '/images/products/acai/tigela-acai.jpg',
     },
     {
       id: 'acai-2',
@@ -276,7 +276,7 @@ async function main() {
       description: 'Milkshake espesso de morango fresco com biscoito Oreo triturado, chantilly e calda. 500ml.',
       price: 22.00,
       category: 'Milkshakes',
-      imageUrl: '/images/restaurants/acai.jpg',
+      imageUrl: '/images/products/acai/milkshake-morango-oreo.jpg',
     },
     {
       id: 'acai-3',
@@ -284,7 +284,7 @@ async function main() {
       description: 'Fatia generosa de bolo de cenoura fofinho com cobertura de ganache de chocolate 70%.',
       price: 14.00,
       category: 'Doces',
-      imageUrl: '/images/restaurants/acai.jpg',
+      imageUrl: '/images/products/acai/bolo-cenoura.jpg',
     },
     {
       id: 'acai-4',
@@ -292,7 +292,7 @@ async function main() {
       description: 'Fatia artesanal de pudim super cremoso com calda de caramelo brilhante.',
       price: 12.00,
       category: 'Doces',
-      imageUrl: '/images/restaurants/acai.jpg',
+      imageUrl: '/images/products/acai/pudim-leite.jpg',
     },
   ];
 
@@ -330,7 +330,7 @@ async function main() {
       description: 'Seleção premium com salmão, atum, camarão e cream cheese. 10 nigiris, 10 sashimis e 10 uramakis.',
       price: 89.90,
       category: 'Combinados',
-      imageUrl: 'https://images.unsplash.com/photo-1617196034183-421b4040ed20?w=600&auto=format&fit=crop',
+      imageUrl: '/images/products/sushi/combinado-30-pecas.jpg',
     },
     {
       id: 'sushi-2',
@@ -338,7 +338,7 @@ async function main() {
       description: 'Cone grande de alga, salmão fresco, cream cheese e cebolinha, coberto com tempurinha crocante.',
       price: 24.90,
       category: 'Temakis',
-      imageUrl: 'https://images.unsplash.com/photo-1563612116625-3012372fccce?w=600&auto=format&fit=crop',
+      imageUrl: '/images/products/sushi/temaki-salmao.jpg',
     },
     {
       id: 'sushi-3',
@@ -346,7 +346,7 @@ async function main() {
       description: 'Arroz temperado, salmão fresco marinado, edamame, pepino, cenoura, abacate e molho shoyu especial.',
       price: 42.90,
       category: 'Pokes',
-      imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop',
+      imageUrl: '/images/products/sushi/poke-salmao.jpg',
     },
     {
       id: 'sushi-4',
@@ -354,7 +354,7 @@ async function main() {
       description: 'Uramaki empanado e frito, recheio de camarão empanado com cream cheese e maionese spicy.',
       price: 34.90,
       category: 'Hot Rolls',
-      imageUrl: 'https://images.unsplash.com/photo-1617196034096-2c8780deedbc?w=600&auto=format&fit=crop',
+      imageUrl: '/images/products/sushi/hot-roll-camarao.jpg',
     },
     {
       id: 'sushi-5',
@@ -362,7 +362,7 @@ async function main() {
       description: 'Água de coco natural gelada em caixinha.',
       price: 8.00,
       category: 'Bebidas',
-      imageUrl: 'https://images.unsplash.com/photo-1614303890819-fd862c73c2a0?w=600&auto=format&fit=crop',
+      imageUrl: '/images/products/sushi/agua-de-coco.jpg',
     },
   ];
 
