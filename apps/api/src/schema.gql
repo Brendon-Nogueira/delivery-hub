@@ -32,10 +32,10 @@ type Query {
   """Lista pedidos com filtros. Ideal para dashboard admin."""
   orders(limit: Int! = 20, offset: Int! = 0, restaurantId: String, status: String): [OrderGql!]!
 
-  """Busca usuário por ID"""
+  """Busca usuário por ID (apenas ADMIN)"""
   user(id: ID!): User
 
-  """Lista todos os usuários"""
+  """Lista todos os usuários (apenas ADMIN)"""
   users: [User!]!
 }
 

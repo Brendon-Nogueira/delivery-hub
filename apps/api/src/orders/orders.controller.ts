@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, ForbiddenException } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
@@ -11,18 +11,6 @@ import { Roles } from '../common/decorators/roles.decorator';
 
 /**
  * OrdersController — Endpoints REST para pedidos.
- *
- * CONCEITOS REST:
- * - POST  /orders            → Criar pedido (201 Created)
- * - GET   /orders/my         → Meus pedidos como cliente
- * - GET   /orders/:id        → Detalhes de um pedido
- * - PATCH /orders/:id/status → Atualizar status (ação no recurso)
- *
- * CONCEITO IMPORTANTE:
- * O POST cria o pedido via REST, mas a NOTIFICAÇÃO ao restaurante
- * é feita via WebSocket.
- * - REST: Persiste dados (source of truth)
- * - WebSocket: Notifica em tempo real (evento efêmero)
  */
 @Controller('orders')
 export class OrdersController {
@@ -38,9 +26,7 @@ export class OrdersController {
     @Body() dto: CreateOrderDto,
   ) {
     const order = await this.ordersService.create(userId, dto);
-
     this.ordersGateway.emitNewOrder(dto.restaurantId, order);
-
     return order;
   }
 
@@ -51,49 +37,89 @@ export class OrdersController {
   }
 
   /**
-   * Endpoint Private.
-   * Apenas o RESTAURANT_OWNER tem permissão para visualizar métricas do seu restaurante.
+   * Apenas o RESTAURANT_OWNER do próprio restaurante ou ADMIN pode ver métricas.
    */
   @Get('restaurant/:restaurantId/stats')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.RESTAURANT_OWNER)
-  async getRestaurantStats(@Param('restaurantId') restaurantId: string) {
-    return this.ordersService.getRestaurantStats(restaurantId);
+  @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
+  async getRestaurantStats(
+    @Param('restaurantId') restaurantId: string,
+    @CurrentUser() user: { userId: string; role: UserRole },
+  ) {
+    return this.ordersService.getRestaurantStats(restaurantId, user);
   }
 
+  /**
+   * Protegido por JWT e verificação de propriedade do restaurante.
+   */
   @Get('restaurant/:restaurantId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
   async getRestaurantOrders(
     @Param('restaurantId') restaurantId: string,
+    @CurrentUser() user: { userId: string; role: UserRole },
     @Query('status') status?: OrderStatus,
   ) {
-    return this.ordersService.findByRestaurant(restaurantId, status);
+    return this.ordersService.findByRestaurant(restaurantId, status, user);
   }
 
+  /**
+   * Exclusão restrita a RESTAURANT_OWNER ou ADMIN.
+   */
   @Delete('clear')
-  async clearOrders(@Query('restaurantId') restaurantId?: string) {
-    return this.ordersService.clearAllOrders(restaurantId);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
+  async clearOrders(
+    @CurrentUser() user: { userId: string; role: UserRole },
+    @Query('restaurantId') restaurantId?: string,
+  ) {
+    return this.ordersService.clearAllOrders(user, restaurantId);
   }
 
   @Get('available-deliveries')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.DRIVER, UserRole.ADMIN)
   async getAvailableDeliveries() {
     return this.ordersService.findAvailableForDelivery();
   }
 
   @Get(':id')
-  async findById(@Param('id') id: string) {
-    return this.ordersService.findById(id);
+  @UseGuards(JwtAuthGuard)
+  async findById(
+    @Param('id') id: string,
+    @CurrentUser() user: { userId: string; role: UserRole },
+  ) {
+    const order = await this.ordersService.findById(id);
+
+    // Apenas partes envolvidas ou ADMIN podem ver
+    const isOwner = order.restaurant?.ownerId === user.userId;
+    const isCustomer = order.customerId === user.userId;
+    const isDriver = user.role === UserRole.DRIVER;
+    const isAdmin = user.role === UserRole.ADMIN;
+
+    if (!isOwner && !isCustomer && !isDriver && !isAdmin) {
+      throw new ForbiddenException('Acesso não autorizado aos detalhes deste pedido.');
+    }
+
+    return order;
   }
 
   @Patch(':id/status')
+  @UseGuards(JwtAuthGuard)
   async updateStatus(
     @Param('id') id: string,
+    @CurrentUser() user: { userId: string; role: UserRole; email: string },
     @Body() dto: UpdateOrderStatusDto,
   ) {
+    const order = await this.ordersService.updateStatusWithAuth(id, dto.status, user, dto.note);
 
-    const order = await this.ordersService.updateStatus(id, dto.status, dto.note);
-
-
-    this.ordersGateway.emitOrderStatusChanged(id, dto.status, dto.note);
+    this.ordersGateway.emitOrderStatusChanged(
+      id,
+      dto.status as OrderStatus,
+      dto.note,
+      order.restaurantId,
+      order.customerId,
+    );
 
     return order;
   }

@@ -5,25 +5,11 @@ import { UpdateMenuItemDto } from './dto/update-menu-item.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '@delivery-hub/shared';
 
 /**
  * MenuController — CRUD REST.
- *
- * CONCEITOS REST:
- * - GET    /menu/restaurant/:restaurantId       → Listar itens disponíveis (public)
- * - GET    /menu/restaurant/:restaurantId/all   → Listar TODOS os itens (owner)
- * - GET    /menu/:id                            → Detalhe de um item
- * - POST   /menu/:restaurantId                  → Criar item (owner)
- * - PATCH  /menu/:id                            → Atualizar parcialmente (owner)
- * - PATCH  /menu/:id/toggle                     → Toggle disponibilidade (owner)
- * - DELETE /menu/:id                            → Deletar item (owner)
- *
- * CONCEITO: Guards em cascata
- * @UseGuards(JwtAuthGuard, RolesGuard) aplica dois guards em sequência:
- * 1. JwtAuthGuard: verifica se o token JWT é válido
- * 2. RolesGuard: verifica se o role do usuário é permitido
- * Se qualquer guard falhar, retorna 401/403 automaticamente.
  */
 @Controller('menu')
 export class MenuController {
@@ -39,18 +25,16 @@ export class MenuController {
 
   /**
    * Endpoint private
-   * Usado por MenuManagementView do owner.
-   *
-   * CONCEITO: Rota específica ANTES de rota genérica
-   * O NestJS avalia rotas em ordem de declaração.
-   * 'restaurant/:restaurantId/all' precisa vir ANTES de ':id'
-   * para não ser interpretado como um ID.
+   * Valida se o usuário é o dono do restaurante ou ADMIN.
    */
   @Get('restaurant/:restaurantId/all')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.RESTAURANT_OWNER)
-  async findAllByRestaurant(@Param('restaurantId') restaurantId: string) {
-    return this.menuService.findAllByRestaurant(restaurantId);
+  @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
+  async findAllByRestaurant(
+    @Param('restaurantId') restaurantId: string,
+    @CurrentUser() user: { userId: string; role: UserRole },
+  ) {
+    return this.menuService.findAllByRestaurant(restaurantId, user);
   }
 
   @Get(':id')
@@ -60,44 +44,43 @@ export class MenuController {
 
   @Post(':restaurantId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.RESTAURANT_OWNER)
+  @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
   async create(
     @Param('restaurantId') restaurantId: string,
     @Body() dto: CreateMenuItemDto,
+    @CurrentUser() user: { userId: string; role: UserRole },
   ) {
-    return this.menuService.create(restaurantId, dto);
+    return this.menuService.create(restaurantId, dto, user);
   }
 
-  /**
-   * PATCH
-   * Aceita qualquer combinação de campos (nome, preço, descrição...)
-   */
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.RESTAURANT_OWNER)
+  @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateMenuItemDto,
+    @CurrentUser() user: { userId: string; role: UserRole },
   ) {
-    return this.menuService.update(id, dto);
+    return this.menuService.update(id, dto, user);
   }
 
   @Patch(':id/toggle')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.RESTAURANT_OWNER)
-  async toggleAvailability(@Param('id') id: string) {
-    return this.menuService.toggleAvailability(id);
+  @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
+  async toggleAvailability(
+    @Param('id') id: string,
+    @CurrentUser() user: { userId: string; role: UserRole },
+  ) {
+    return this.menuService.toggleAvailability(id, user);
   }
 
-  /**
-   * DELETE
-   * Se o item tem pedidos associados, faz soft-delete (desativa).
-   * Se não tem, faz hard-delete (remove do banco).
-   */
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.RESTAURANT_OWNER)
-  async delete(@Param('id') id: string) {
-    return this.menuService.delete(id);
+  @Roles(UserRole.RESTAURANT_OWNER, UserRole.ADMIN)
+  async delete(
+    @Param('id') id: string,
+    @CurrentUser() user: { userId: string; role: UserRole },
+  ) {
+    return this.menuService.delete(id, user);
   }
 }

@@ -1,20 +1,14 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { GqlExecutionContext } from '@nestjs/graphql';
 import { UserRole } from '@delivery-hub/shared';
-import { ROLES_KEY } from '../decorators/roles.decorator';
+import { ROLES_KEY } from '../../common/decorators/roles.decorator';
 
 /**
- * RolesGuard — Guard de autorização baseada em roles.
- *
- * CONCEITO: Diferença entre autenticação e autorização
- * verifica se o usuário autenticado tem permissão para acessar o recurso.
- *
- * Deve ser usado APÓS o JwtAuthGuard:
- *   @UseGuards(JwtAuthGuard, RolesGuard)
- *   @Roles(UserRole.ADMIN)
+ * GqlRolesGuard — Guard de autorização baseada em roles para resolvers GraphQL.
  */
 @Injectable()
-export class RolesGuard implements CanActivate {
+export class GqlRolesGuard implements CanActivate {
   constructor(private reflector: Reflector) { }
 
   canActivate(context: ExecutionContext): boolean {
@@ -23,16 +17,18 @@ export class RolesGuard implements CanActivate {
       [context.getHandler(), context.getClass()],
     );
 
-
     if (!requiredRoles || requiredRoles.length === 0) {
       return true;
     }
 
-    const req = context.switchToHttp().getRequest();
+    const ctx = GqlExecutionContext.create(context);
+    const req = ctx.getContext().req;
     const user = req?.user;
+
     if (!user || !user.role) {
       return false;
     }
+
     return requiredRoles.includes(user.role);
   }
 }

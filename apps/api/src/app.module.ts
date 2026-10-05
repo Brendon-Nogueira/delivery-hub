@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { join } from 'path';
 
 import { PrismaModule } from './common/prisma/prisma.module';
@@ -15,22 +17,31 @@ import { DeliveryModule } from './delivery/delivery.module';
 
 interface ContextArgs { req: Request; }
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 @Module({
   imports: [
     // ─── Configuração Global ──────────────────────────────────────
-    // Carrega .env automaticamente e torna ConfigService disponível em qualquer módulo
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env', '../../.env'], // Suporta .env na raiz do monorepo
     }),
 
+    // ─── Rate Limiting Global (Throttler) ──────────────────
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 60 segundos
+        limit: 120, // 120 requisições por IP por minuto
+      },
+    ]),
+
     // ─── GraphQL (Code-First) ─────────────────────────────────────
-    // O schema é gerado automaticamente a partir dos decorators @ObjectType, @Field, etc.
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
-      autoSchemaFile: join(process.cwd(), 'src/schema.gql'), // Gera arquivo de schema
+      autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
       sortSchema: true,
-      playground: true, // Habilita GraphQL Playground em http://localhost:4000/graphql
+      playground: !isProduction,
+      introspection: !isProduction,
       context: ({ req }: ContextArgs) => ({ req }),
     }),
 
@@ -45,6 +56,12 @@ interface ContextArgs { req: Request; }
     MenuModule,
     OrdersModule,
     DeliveryModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule { }

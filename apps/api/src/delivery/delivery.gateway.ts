@@ -36,7 +36,7 @@ import { DeliveryService, DriverLocation } from './delivery.service';
 @WebSocketGateway({
   namespace: '/delivery',
   cors: {
-    origin: '*',
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     credentials: true,
   },
 })
@@ -75,23 +75,21 @@ export class DeliveryGateway implements OnGatewayConnection, OnGatewayDisconnect
   }
 
   /**
-   * Dispara atualização de localização do entregador para todos na room do pedido.
+   * Dispara atualização de localização do entregador EXCLUSIVAMENTE para a room do pedido.
+   * Não realiza broadcast global para proteger a privacidade e segurança do entregador.
    */
   emitLocationUpdate(location: DriverLocation) {
     if (this.server) {
       this.server.to(`order:${location.orderId}`).emit('driverLocationUpdate', location);
-      // Também emite globalmente para fácil visualização em painéis de monitoramento
-      this.server.emit('driverLocationUpdate', location);
     }
   }
 
   /**
-   * Notifica que o entregador chegou exatamente no endereço do cliente
+   * Notifica que o entregador chegou exclusivamente para a room do pedido.
    */
   emitDriverArrived(orderId: string) {
     if (this.server) {
       this.server.to(`order:${orderId}`).emit('driverArrived', { orderId, arrivedAt: new Date().toISOString() });
-      this.server.emit('driverArrived', { orderId, arrivedAt: new Date().toISOString() });
     }
   }
 
@@ -107,24 +105,24 @@ export class DeliveryGateway implements OnGatewayConnection, OnGatewayDisconnect
     @MessageBody() data: { orderId: string },
   ) {
     client.join(`order:${data.orderId}`);
-    this.logger.log(`${client.data.user?.email} rastreando pedido ${data.orderId}`);
+    this.logger.log(`${client.data.user?.email || client.id} rastreando pedido ${data.orderId}`);
     return { event: 'joinedDeliveryRoom', data: { orderId: data.orderId, success: true } };
   }
 
   /**
    * sendLocation — Entregador envia sua posição GPS.
-   *
-   * Payload: { orderId: string, lat: number, lng: number }
-   *
-   * O servidor:
-   * 1. Persiste no Redis (rápido, com TTL).
-   * 2. Faz broadcast para todos na room do pedido (cliente no mapa).
+   * Apenas motoristas autenticados ou ADMIN podem enviar telemetria.
    */
   @SubscribeMessage('sendLocation')
   async handleSendLocation(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { orderId: string; lat: number; lng: number },
   ) {
+    const user = client.data?.user;
+    if (!user || (user.role !== 'DRIVER' && user.role !== 'ADMIN')) {
+      return { event: 'locationError', data: { success: false, message: 'Permissão negada para envio de GPS.' } };
+    }
+
     const location: DriverLocation = {
       orderId: data.orderId,
       lat: data.lat,
@@ -139,7 +137,7 @@ export class DeliveryGateway implements OnGatewayConnection, OnGatewayDisconnect
     this.server.to(`order:${data.orderId}`).emit('driverLocationUpdate', location);
 
     this.logger.debug(
-      `Broadcast GPS: pedido ${data.orderId} → (${data.lat.toFixed(4)}, ${data.lng.toFixed(4)})`,
+      `GPS transmitido na room order:${data.orderId} → (${data.lat.toFixed(4)}, ${data.lng.toFixed(4)}) por ${user.email}`,
     );
 
     return { event: 'locationReceived', data: { success: true } };

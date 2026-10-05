@@ -1,6 +1,7 @@
-import { Injectable, UnauthorizedException, ConflictException, Logger } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, ForbiddenException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { UserRole } from '@delivery-hub/shared';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -22,6 +23,9 @@ export class AuthService {
    * - Status 409: Email já existe (ConflictException)
    */
   async register(dto: RegisterDto) {
+    if (dto.role === UserRole.ADMIN || (dto.role as string) === 'ADMIN') {
+      throw new ForbiddenException('Não é permitido registrar conta de administrador por esta rota.');
+    }
 
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email },

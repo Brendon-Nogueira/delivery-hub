@@ -82,12 +82,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
-  
+  // Login rápido com credenciais padrão ativado exclusivamente em desenvolvimento
   const quickLogin = async (role: 'CUSTOMER' | 'RESTAURANT' | 'DRIVER', customEmail?: string) => {
+    if (!import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEMO_ACCOUNTS !== 'true') {
+      throw new Error('Login rápido de demonstração está desativado neste ambiente de produção.');
+    }
+
+    const defaultDevPass = (import.meta.env.VITE_DEMO_PASSWORD as string) || '123456';
     const credentials = {
-      CUSTOMER: { email: 'cliente@teste.com', pass: '123456' },
-      RESTAURANT: { email: 'dono@restaurante.com', pass: '123456' },
-      DRIVER: { email: 'driver@teste.com', pass: '123456' },
+      CUSTOMER: { email: 'cliente@teste.com', pass: defaultDevPass },
+      RESTAURANT: { email: 'dono@restaurante.com', pass: defaultDevPass },
+      DRIVER: { email: 'driver@teste.com', pass: defaultDevPass },
     }[role];
 
     const emailToUse = customEmail || credentials.email;

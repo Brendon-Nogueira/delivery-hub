@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { OrderStatus } from '@delivery-hub/shared';
+import { OrderStatus, UserRole } from '@delivery-hub/shared';
 import { Decimal } from '@prisma/client/runtime/library';
 
 
@@ -94,7 +94,7 @@ export class OrdersService {
       include: {
         items: { include: { menuItem: true } },
         customer: { select: { id: true, name: true, phone: true } },
-        restaurant: { select: { id: true, name: true, address: true } },
+        restaurant: { select: { id: true, name: true, address: true, ownerId: true } },
         driver: { select: { id: true, name: true, phone: true } },
         statusHistory: { orderBy: { createdAt: 'desc' } },
       },
@@ -115,7 +115,21 @@ export class OrdersService {
     });
   }
 
-  async findByRestaurant(restaurantId: string, status?: OrderStatus) {
+  async findByRestaurant(
+    restaurantId: string,
+    status?: OrderStatus,
+    user?: { userId: string; role: UserRole },
+  ) {
+    // Garante que proprietários vejam apenas seus próprios pedidos
+    if (user && user.role === UserRole.RESTAURANT_OWNER) {
+      const restaurant = await this.prisma.restaurant.findUnique({
+        where: { id: restaurantId },
+      });
+      if (!restaurant || restaurant.ownerId !== user.userId) {
+        throw new ForbiddenException('Você não tem permissão para visualizar pedidos de outro restaurante.');
+      }
+    }
+
     return this.prisma.order.findMany({
       where: {
         restaurantId,
@@ -170,6 +184,60 @@ export class OrdersService {
       OUT_FOR_DELIVERY: OrderStatus.IN_TRANSIT,
     };
     return (map[rawStatus as string] || rawStatus) as OrderStatus;
+  }
+
+  /**
+   * SEC-02: Atualização de status com verificação rigorosa de autorização baseada em Role e Propriedade.
+   */
+  async updateStatusWithAuth(
+    orderId: string,
+    rawStatus: OrderStatus | string,
+    user: { userId: string; role: UserRole; email?: string },
+    note?: string,
+  ) {
+    const status = this.normalizeStatus(rawStatus);
+    const currentOrder = await this.findById(orderId);
+
+    if (user.role === UserRole.CUSTOMER) {
+      if (currentOrder.customerId !== user.userId) {
+        throw new ForbiddenException('Você não tem permissão para alterar este pedido.');
+      }
+      if (status !== OrderStatus.CANCELLED) {
+        throw new BadRequestException('Clientes só podem solicitar o cancelamento do pedido.');
+      }
+      if (currentOrder.status !== OrderStatus.PENDING) {
+        throw new BadRequestException('Não é possível cancelar um pedido que já está em preparo ou trânsito.');
+      }
+    } else if (user.role === UserRole.RESTAURANT_OWNER) {
+      const restaurant = await this.prisma.restaurant.findUnique({
+        where: { id: currentOrder.restaurantId },
+      });
+      if (!restaurant || restaurant.ownerId !== user.userId) {
+        throw new ForbiddenException('Você não tem permissão para gerenciar pedidos de outro restaurante.');
+      }
+    } else if (user.role === UserRole.DRIVER) {
+      const allowedDriverStatuses = [
+        OrderStatus.PICKED_UP,
+        OrderStatus.IN_TRANSIT,
+        OrderStatus.DELIVERED,
+      ];
+      if (!allowedDriverStatuses.includes(status)) {
+        throw new BadRequestException(`Entregadores não podem alterar o status para ${status}.`);
+      }
+
+      if (!currentOrder.driverId) {
+        await this.prisma.order.update({
+          where: { id: orderId },
+          data: { driverId: user.userId },
+        });
+      } else if (currentOrder.driverId !== user.userId) {
+        throw new ForbiddenException('Este pedido já está sob responsabilidade de outro entregador.');
+      }
+    } else if (user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Usuário não autorizado a alterar o status deste pedido.');
+    }
+
+    return this.updateStatus(orderId, status, note);
   }
 
   /**
@@ -291,12 +359,20 @@ export class OrdersService {
 
   /**
    * Estatísticas detalhadas para o dashboard do restaurante.
-   *
-   * CONCEITO: Agregações no Prisma
-   * Usa count(), groupBy(), e aggregate(_sum) em paralelo para
-   * calcular métricas financeiras e operacionais com eficiência.
    */
-  async getRestaurantStats(restaurantId: string) {
+  async getRestaurantStats(
+    restaurantId: string,
+    user?: { userId: string; role: UserRole },
+  ) {
+    if (user && user.role === UserRole.RESTAURANT_OWNER) {
+      const restaurant = await this.prisma.restaurant.findUnique({
+        where: { id: restaurantId },
+      });
+      if (!restaurant || restaurant.ownerId !== user.userId) {
+        throw new ForbiddenException('Você não tem permissão para acessar métricas deste restaurante.');
+      }
+    }
+
     const [
       totalOrders,
       statusCounts,
@@ -384,9 +460,32 @@ export class OrdersService {
     };
   }
 
-  async clearAllOrders(restaurantId?: string) {
+  /**
+   * Garante que RESTAURANT_OWNER só possa apagar pedidos da sua própria loja.
+   * Apenas ADMIN pode apagar de outras lojas ou globalmente.
+   */
+  async clearAllOrders(
+    user: { userId: string; role: UserRole },
+    requestedRestaurantId?: string,
+  ) {
+    let targetRestaurantId: string | undefined;
+
+    if (user.role === UserRole.RESTAURANT_OWNER) {
+      const restaurant = await this.prisma.restaurant.findFirst({
+        where: { ownerId: user.userId },
+      });
+      if (!restaurant) {
+        throw new ForbiddenException('Nenhum restaurante encontrado para o seu usuário.');
+      }
+      targetRestaurantId = restaurant.id;
+    } else if (user.role === UserRole.ADMIN) {
+      targetRestaurantId = requestedRestaurantId;
+    } else {
+      throw new ForbiddenException('Apenas proprietários de restaurante ou administradores podem limpar pedidos.');
+    }
+
     return this.prisma.$transaction(async (tx) => {
-      const whereClause = restaurantId ? { restaurantId } : {};
+      const whereClause = targetRestaurantId ? { restaurantId: targetRestaurantId } : {};
       const orders = await tx.order.findMany({
         where: whereClause,
         select: { id: true },
@@ -408,7 +507,7 @@ export class OrdersService {
         });
       }
 
-      this.logger.log(`Limpeza concluída: ${orderIds.length} pedidos removidos`);
+      this.logger.log(`Limpeza concluída por ${user.role} (${user.userId}): ${orderIds.length} pedidos removidos`);
       return { count: orderIds.length };
     });
   }

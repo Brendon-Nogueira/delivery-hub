@@ -1,12 +1,17 @@
-import { Controller, Post, Get, Body, Param, Logger } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Logger, UseGuards } from '@nestjs/common';
 import { DeliveryService, DriverLocation } from './delivery.service';
 import { DeliveryGateway } from './delivery.gateway';
 import { UpdateLocationDto } from './dto/update-location.dto';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { UserRole } from '@delivery-hub/shared';
 
 @Controller('delivery')
 export class DeliveryController {
   private readonly logger = new Logger(DeliveryController.name);
+  private readonly runningSimulations = new Set<string>();
 
   constructor(
     private readonly deliveryService: DeliveryService,
@@ -16,9 +21,11 @@ export class DeliveryController {
 
   /**
    * Endpoint REST para receber coordenadas GPS do entregador.
-   * Salva no Redis (chave driver:location:{orderId}) e faz broadcast via WebSocket.
+   * Apenas entregadores autorizados ou ADMIN.
    */
   @Post('location')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.DRIVER, UserRole.ADMIN)
   async updateLocation(@Body() dto: UpdateLocationDto) {
     const location: DriverLocation = {
       orderId: dto.orderId,
@@ -40,6 +47,7 @@ export class DeliveryController {
    * Retorna a última localização conhecida do entregador em cache no Redis.
    */
   @Get('location/:orderId')
+  @UseGuards(JwtAuthGuard)
   async getLocation(@Param('orderId') orderId: string) {
     const location = await this.deliveryService.getDriverLocation(orderId);
     return {
@@ -51,9 +59,10 @@ export class DeliveryController {
 
   /**
    * Endpoint simulador: Dispara uma rota de entrega em ruas reais (OSRM).
-   * Emite cada coordenada curva a curva e notifica chegada ao destino.
+   * Protegido por JWT e com controle estrito de concorrência anti-DoS.
    */
   @Post('simulate-trip/:orderId')
+  @UseGuards(JwtAuthGuard)
   async simulateTrip(
     @Param('orderId') orderId: string,
     @Body()
@@ -145,58 +154,75 @@ export class DeliveryController {
       }
     }
 
+    if (this.runningSimulations.has(orderId)) {
+      return {
+        message: `Simulação já em andamento para o pedido ${orderId}`,
+        totalWaypoints: 0,
+        estimatedSeconds: 0,
+        destination: destinationLabel,
+        alreadyRunning: true,
+      };
+    }
+    this.runningSimulations.add(orderId);
+
     this.logger.log(
       `Iniciando simulação de rota viária REAL para pedido ${orderId} (${routeCoords.length} waypoints pelas ruas até "${destinationLabel}")...`,
     );
 
     // Inicia simulação em background com telemetria passo a passo
     (async () => {
-      // Duração total ~25 segundos distribuída entre os waypoints
-      const intervalMs = Math.max(400, Math.min(1200, Math.round(25000 / routeCoords.length)));
+      try {
+        // Duração total ~25 segundos distribuída entre os waypoints
+        const intervalMs = Math.max(400, Math.min(1200, Math.round(25000 / routeCoords.length)));
 
-      for (let i = 0; i < routeCoords.length; i++) {
-        const [currentLat, currentLng] = routeCoords[i];
-        const stepIndex = i + 1;
-        const totalSteps = routeCoords.length;
-        const progressPercent = Math.round((stepIndex / totalSteps) * 100);
-        const isArrived = i === routeCoords.length - 1;
+        for (let i = 0; i < routeCoords.length; i++) {
+          const [currentLat, currentLng] = routeCoords[i];
+          const stepIndex = i + 1;
+          const totalSteps = routeCoords.length;
+          const progressPercent = Math.round((stepIndex / totalSteps) * 100);
+          const isArrived = i === routeCoords.length - 1;
 
-        // Determina nome aproximado da via atual
-        const streetIdx = Math.min(
-          streetNames.length - 1,
-          Math.floor((i / routeCoords.length) * (streetNames.length || 1)),
-        );
-        const streetName = streetNames[streetIdx] || (isArrived ? destinationLabel : 'Vias de Paraisópolis');
-
-        const location: DriverLocation = {
-          orderId,
-          lat: currentLat,
-          lng: currentLng,
-          stepIndex,
-          totalSteps,
-          progressPercent,
-          isArrived,
-          streetName,
-          timestamp: new Date().toISOString(),
-        };
-
-        await this.deliveryService.saveDriverLocation(location);
-        this.deliveryGateway.emitLocationUpdate(location);
-
-        if (stepIndex % 5 === 0 || isArrived) {
-          this.logger.log(
-            `[Passo ${stepIndex}/${totalSteps} • ${progressPercent}%] GPS: (${currentLat.toFixed(4)}, ${currentLng.toFixed(4)}) → ${streetName}`,
+          // Determina nome aproximado da via atual
+          const streetIdx = Math.min(
+            streetNames.length - 1,
+            Math.floor((i / routeCoords.length) * (streetNames.length || 1)),
           );
+          const streetName = streetNames[streetIdx] || (isArrived ? destinationLabel : 'Vias de Paraisópolis');
+
+          const location: DriverLocation = {
+            orderId,
+            lat: currentLat,
+            lng: currentLng,
+            stepIndex,
+            totalSteps,
+            progressPercent,
+            isArrived,
+            streetName,
+            timestamp: new Date().toISOString(),
+          };
+
+          await this.deliveryService.saveDriverLocation(location);
+          this.deliveryGateway.emitLocationUpdate(location);
+
+          if (stepIndex % 5 === 0 || isArrived) {
+            this.logger.log(
+              `[Passo ${stepIndex}/${totalSteps} • ${progressPercent}%] GPS: (${currentLat.toFixed(4)}, ${currentLng.toFixed(4)}) → ${streetName}`,
+            );
+          }
+
+          if (!isArrived) {
+            await new Promise((resolve) => setTimeout(resolve, intervalMs));
+          }
         }
 
-        if (!isArrived) {
-          await new Promise((resolve) => setTimeout(resolve, intervalMs));
-        }
+        // 4. Notifica chegada ao destino para cliente e entregador
+        this.deliveryGateway.emitDriverArrived(orderId);
+        this.logger.log(`[DeliveryController] Chegada confirmada! Entregador no portão de "${destinationLabel}" para o pedido ${orderId}.`);
+      } catch (err: any) {
+        this.logger.error(`Erro durante simulação do pedido ${orderId}: ${err.message}`);
+      } finally {
+        this.runningSimulations.delete(orderId);
       }
-
-      // 4. Notifica chegada ao destino para cliente e entregador
-      this.deliveryGateway.emitDriverArrived(orderId);
-      this.logger.log(`[DeliveryController] Chegada confirmada! Entregador no portão de "${destinationLabel}" para o pedido ${orderId}.`);
     })();
 
     return {

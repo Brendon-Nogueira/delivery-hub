@@ -2,10 +2,19 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { IoAdapter } from '@nestjs/platform-socket.io';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const logger = new Logger('Bootstrap');
+
+  // HTTP Security Headers via Helmet
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
 
   // Prefixo global para rotas REST (não afeta GraphQL nem WebSocket)
   app.setGlobalPrefix('api/v1', {

@@ -43,7 +43,7 @@ import { OrdersService } from './orders.service';
 @WebSocketGateway({
   namespace: '/orders',
   cors: {
-    origin: '*',
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     credentials: true,
   },
 })
@@ -89,6 +89,11 @@ export class OrdersGateway
       // Entra na room pessoal do usuário
       client.join(`user:${payload.sub}`);
 
+      // Entra em room específica por papel se for entregador
+      if (payload.role === 'DRIVER') {
+        client.join('role:DRIVER');
+      }
+
       this.logger.log(
         `Conectado: ${client.id} | ${payload.email} (${payload.role})`,
       );
@@ -115,7 +120,7 @@ export class OrdersGateway
   ) {
     client.join(`order:${data.orderId}`);
     this.logger.log(
-      `${client.data.user?.email} entrou na room order:${data.orderId}`,
+      `${client.data.user?.email || client.id} entrou na room order:${data.orderId}`,
     );
 
     return {
@@ -134,7 +139,7 @@ export class OrdersGateway
   ) {
     client.join(`restaurant:${data.restaurantId}`);
     this.logger.log(
-      `Restaurante ${data.restaurantId} online (${client.data.user?.email})`,
+      `Restaurante ${data.restaurantId} online (${client.data.user?.email || client.id})`,
     );
 
     return {
@@ -145,14 +150,7 @@ export class OrdersGateway
 
   /**
    * updateOrderStatus — Restaurante/Entregador atualiza status via WebSocket.
-   * 
-   * CONCEITO BIDIRECIONAL:
-   * No REST, o restaurante faria PATCH /orders/:id/status e o cliente
-   * precisaria fazer polling para descobrir a mudança.
-   * 
-   * Com WebSocket, o restaurante emite 'updateOrderStatus' e o servidor
-   * INSTANTANEAMENTE notifica o cliente que está na room do pedido.
-   * Latência: ~50ms vs ~5000ms do polling.
+   * Validação de usuário autenticado e emissão direcionada para rooms.
    */
   @SubscribeMessage(WS_EVENTS.ORDER_UPDATE_STATUS)
   async handleUpdateOrderStatus(
@@ -161,24 +159,41 @@ export class OrdersGateway
     data: { orderId: string; status: OrderStatus | string; note?: string },
   ) {
     try {
-      // atualiza via OrdersService!
-      const updatedOrder = await this.ordersService.updateStatus(
+      const user = client.data?.user;
+      if (!user) {
+        return {
+          event: 'statusUpdateError',
+          data: { success: false, message: 'Autenticação necessária para atualizar status.' },
+        };
+      }
+
+      // Atualiza com validação de permissões!
+      const updatedOrder = await this.ordersService.updateStatusWithAuth(
         data.orderId,
         data.status as any,
+        user,
         data.note,
       );
 
-      // Transmite via WebSocket em tempo real para os clientes (uma única emissão global)
-      this.server.emit(WS_EVENTS.ORDER_STATUS_CHANGED, {
+      const statusPayload = {
         orderId: data.orderId,
         status: updatedOrder.status,
         note: data.note,
-        updatedBy: client.data?.user?.email,
+        updatedBy: user.email,
         updatedAt: new Date().toISOString(),
-      });
+      };
+
+      // Transmite via WebSocket EXCLUSIVAMENTE para as rooms autorizadas
+      this.server.to(`order:${data.orderId}`).emit(WS_EVENTS.ORDER_STATUS_CHANGED, statusPayload);
+      this.server.to(`restaurant:${updatedOrder.restaurantId}`).emit(WS_EVENTS.ORDER_STATUS_CHANGED, statusPayload);
+      this.server.to(`user:${updatedOrder.customerId}`).emit(WS_EVENTS.ORDER_STATUS_CHANGED, statusPayload);
+
+      if (updatedOrder.status === OrderStatus.READY_FOR_PICKUP) {
+        this.server.to('role:DRIVER').emit(WS_EVENTS.ORDER_STATUS_CHANGED, statusPayload);
+      }
 
       this.logger.log(
-        `Status persistido e emitido: ${data.orderId} → ${updatedOrder.status} (por ${client.data?.user?.email || 'anônimo'})`,
+        `Status atualizado e emitido para rooms: ${data.orderId} → ${updatedOrder.status} (por ${user.email})`,
       );
 
       return { event: 'statusUpdated', data: { success: true, status: updatedOrder.status } };
@@ -191,28 +206,46 @@ export class OrdersGateway
   // ─── Métodos chamados pelo OrdersController (REST → WS bridge) ───
 
   /**
-   * Emite evento de novo pedido para o restaurante.
-   * Chamado pelo OrdersController.create() após persistir via REST.
+   * Emite evento de novo pedido para a room do restaurante e para o cliente criador.
+   * Não faz broadcast global para evitar vazamento de dados de clientes.
    */
   emitNewOrder(restaurantId: string, order: any) {
-    this.server.emit(WS_EVENTS.ORDER_NEW, order);
-    this.logger.log(`Novo pedido emitido para restaurant:${restaurantId}`);
+    this.server.to(`restaurant:${restaurantId}`).emit(WS_EVENTS.ORDER_NEW, order);
+    if (order?.customerId) {
+      this.server.to(`user:${order.customerId}`).emit(WS_EVENTS.ORDER_NEW, order);
+    }
+    this.logger.log(`Novo pedido emitido para restaurant:${restaurantId} e user:${order?.customerId}`);
   }
 
   /**
-   * Emite mudança de status para os clientes.
-   * Chamado pelo OrdersController.updateStatus() após persistir via REST.
+   * Emite mudança de status direcionada para as rooms do pedido, restaurante e cliente.
    */
   emitOrderStatusChanged(
     orderId: string,
     status: OrderStatus,
     note?: string,
+    restaurantId?: string,
+    customerId?: string,
   ) {
-    this.server.emit(WS_EVENTS.ORDER_STATUS_CHANGED, {
+    const payload = {
       orderId,
       status,
       note,
       updatedAt: new Date().toISOString(),
-    });
+    };
+
+    this.server.to(`order:${orderId}`).emit(WS_EVENTS.ORDER_STATUS_CHANGED, payload);
+
+    if (restaurantId) {
+      this.server.to(`restaurant:${restaurantId}`).emit(WS_EVENTS.ORDER_STATUS_CHANGED, payload);
+    }
+
+    if (customerId) {
+      this.server.to(`user:${customerId}`).emit(WS_EVENTS.ORDER_STATUS_CHANGED, payload);
+    }
+
+    if (status === OrderStatus.READY_FOR_PICKUP) {
+      this.server.to('role:DRIVER').emit(WS_EVENTS.ORDER_STATUS_CHANGED, payload);
+    }
   }
 }

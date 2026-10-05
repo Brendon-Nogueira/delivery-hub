@@ -1,6 +1,10 @@
 import { Resolver, Query, Args, ObjectType, Field, ID, Int, Float } from '@nestjs/graphql';
+import { UseGuards } from '@nestjs/common';
 import { OrdersService } from './orders.service';
-import { OrderStatus } from '@delivery-hub/shared';
+import { OrderStatus, UserRole } from '@delivery-hub/shared';
+import { GqlAuthGuard } from '../auth/guards/gql-auth.guard';
+import { GqlRolesGuard } from '../auth/guards/gql-roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 
 /**
  * CONCEITO GRAPHQL — Code-First:
@@ -107,13 +111,14 @@ export class OrdersResolver {
     name: 'orders',
     description: 'Lista pedidos com filtros. Ideal para dashboard admin.',
   })
+  @UseGuards(GqlAuthGuard, GqlRolesGuard)
+  @Roles(UserRole.ADMIN)
   async getOrders(
     @Args('status', { nullable: true }) status?: string,
     @Args('restaurantId', { nullable: true }) restaurantId?: string,
     @Args('limit', { type: () => Int, defaultValue: 20 }) limit?: number,
     @Args('offset', { type: () => Int, defaultValue: 0 }) offset?: number,
   ) {
-    // Falta implementar query com filtros usando Prisma
     if (restaurantId) {
       const orders = await this.ordersService.findByRestaurant(
         restaurantId,
@@ -130,20 +135,14 @@ export class OrdersResolver {
 
   /**
    * Query: dashboardStats — Estatísticas agregadas para o painel admin.
-   *
-   * Exemplo:
-   *   query {
-   *     dashboardStats {
-   *       totalOrders
-   *       activeOrders
-   *       totalRevenue
-   *     }
-   *   }
+   * Protegido por JWT e restrito a administradores.
    */
   @Query(() => DashboardStats, {
     name: 'dashboardStats',
     description: 'Estatísticas do dashboard admin',
   })
+  @UseGuards(GqlAuthGuard, GqlRolesGuard)
+  @Roles(UserRole.ADMIN)
   async getDashboardStats() {
     return this.ordersService.getDashboardStats();
   }

@@ -1,20 +1,57 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CreateMenuItemDto } from './dto/create-menu-item.dto';
 import { UpdateMenuItemDto } from './dto/update-menu-item.dto';
+import { UserRole } from '@delivery-hub/shared';
 
 @Injectable()
 export class MenuService {
   constructor(private readonly prisma: PrismaService) { }
 
   /**
-   * CREATE.
-   *
-   * CONCEITO Prisma: create()
-   * Insere um novo registro. O spread operator (...dto) mapeia
-   * automaticamente os campos do DTO para as colunas do banco.
+   * Helper para validar propriedade do restaurante.
    */
-  async create(restaurantId: string, dto: CreateMenuItemDto) {
+  async verifyRestaurantOwnership(
+    restaurantId: string,
+    user: { userId: string; role: UserRole },
+  ): Promise<void> {
+    if (user.role === UserRole.ADMIN) return;
+
+    const restaurant = await this.prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+    });
+
+    if (!restaurant) {
+      throw new NotFoundException(`Restaurante ${restaurantId} não encontrado`);
+    }
+
+    if (restaurant.ownerId !== user.userId) {
+      throw new ForbiddenException('Você não tem permissão para gerenciar o cardápio deste restaurante.');
+    }
+  }
+
+  /**
+   * Helper para validar se o item pertence a um restaurante do usuário.
+   */
+  async verifyMenuItemOwnership(
+    menuItemId: string,
+    user: { userId: string; role: UserRole },
+  ) {
+    const item = await this.findById(menuItemId);
+    await this.verifyRestaurantOwnership(item.restaurantId, user);
+    return item;
+  }
+
+  /**
+   * CREATE.
+   */
+  async create(
+    restaurantId: string,
+    dto: CreateMenuItemDto,
+    user: { userId: string; role: UserRole },
+  ) {
+    await this.verifyRestaurantOwnership(restaurantId, user);
+
     return this.prisma.menuItem.create({
       data: {
         ...dto,
@@ -24,11 +61,7 @@ export class MenuService {
   }
 
   /**
-   * SEARCH.
-   *
-   * CONCEITO: Filtragem por disponibilidade
-   * O cliente NÃO deve ver itens marcados como "esgotado".
-   * O owner vê todos via findAllByRestaurant().
+   * SEARCH (Público - cliente vê itens disponíveis).
    */
   async findByRestaurant(restaurantId: string) {
     return this.prisma.menuItem.findMany({
@@ -38,14 +71,14 @@ export class MenuService {
   }
 
   /**
-   * SEARCH.
-   *
-   * CONCEITO: Endpoint de gestão vs. endpoint público
-   * O owner do restaurante precisa ver TODOS os itens para gerenciá-los,
-   * inclusive os que estão temporariamente indisponíveis.
-   * Este endpoint é protegido por JwtAuthGuard + RolesGuard no controller.
+   * SEARCH (Privado - dono do restaurante).
    */
-  async findAllByRestaurant(restaurantId: string) {
+  async findAllByRestaurant(
+    restaurantId: string,
+    user: { userId: string; role: UserRole },
+  ) {
+    await this.verifyRestaurantOwnership(restaurantId, user);
+
     return this.prisma.menuItem.findMany({
       where: { restaurantId },
       orderBy: [{ category: 'asc' }, { name: 'asc' }],
@@ -59,16 +92,14 @@ export class MenuService {
   }
 
   /**
-   * Atualiza parcialmente um item do cardápio.
-   *
-   * CONCEITO Prisma: update() com spread
-   * O Prisma ignora campos undefined, então podemos fazer spread
-   * do DTO diretamente — só os campos enviados serão atualizados.
-   * Isso é o comportamento PATCH ideal.
+   * Atualiza parcialmente um item do cardápio com validação de propriedade.
    */
-  async update(id: string, dto: UpdateMenuItemDto) {
-
-    await this.findById(id);
+  async update(
+    id: string,
+    dto: UpdateMenuItemDto,
+    user: { userId: string; role: UserRole },
+  ) {
+    await this.verifyMenuItemOwnership(id, user);
 
     return this.prisma.menuItem.update({
       where: { id },
@@ -77,14 +108,14 @@ export class MenuService {
   }
 
   /**
-   * Alterna a disponibilidade de um item.
-   *
-   * CONCEITO: Toggle pattern
-   * Busca o estado atual e inverte. Útil para marcar itens como
-   * "esgotado" sem deletá-los permanentemente.
+   * Alterna a disponibilidade de um item com validação de propriedade.
    */
-  async toggleAvailability(id: string) {
-    const item = await this.findById(id);
+  async toggleAvailability(
+    id: string,
+    user: { userId: string; role: UserRole },
+  ) {
+    const item = await this.verifyMenuItemOwnership(id, user);
+
     return this.prisma.menuItem.update({
       where: { id },
       data: { isAvailable: !item.isAvailable },
@@ -92,24 +123,19 @@ export class MenuService {
   }
 
   /**
-   * DELETE.
-   *
-   * CONCEITO: Hard delete vs. Soft delete
-   * Aqui usamos hard delete (remoção real do banco).
-   * Em produção, seria melhor usar soft delete (marcar como deletado)
-   * para manter histórico de pedidos que referenciavam este item.
-   *
+   * DELETE com validação de propriedade.
    */
-  async delete(id: string) {
-    await this.findById(id);
-
+  async delete(
+    id: string,
+    user: { userId: string; role: UserRole },
+  ) {
+    await this.verifyMenuItemOwnership(id, user);
 
     const orderItemsCount = await this.prisma.orderItem.count({
       where: { menuItemId: id },
     });
 
     if (orderItemsCount > 0) {
-
       return this.prisma.menuItem.update({
         where: { id },
         data: { isAvailable: false },

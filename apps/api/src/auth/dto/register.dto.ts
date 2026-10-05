@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
 import { UserRole } from '@delivery-hub/shared';
 
 export class RegisterDto {
@@ -13,7 +13,9 @@ export class RegisterDto {
   @IsNotEmpty({ message: 'Nome é obrigatório' })
   name: string;
 
-  @IsEnum(UserRole, { message: 'Role deve ser: CUSTOMER, RESTAURANT_OWNER, DRIVER ou ADMIN' })
+  @IsIn([UserRole.CUSTOMER, UserRole.RESTAURANT_OWNER, UserRole.DRIVER], {
+    message: 'Função inválida para autorregistro. Contas administrativas não podem ser criadas por esta rota.',
+  })
   role: UserRole;
 
   @IsOptional()
