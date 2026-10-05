@@ -251,10 +251,10 @@ export const OrderHistoryView: React.FC = () => {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all active:scale-95 ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all active:scale-[0.98] ${
                 isSelected
-                  ? 'bg-gradient-to-r from-brand-600 to-brand-500 text-white shadow-brand-glow'
-                  : 'bg-white text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 border border-zinc-200/60'
+                  ? 'bg-orange-500 text-white shadow-sm'
+                  : 'bg-white text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 border border-zinc-200/60'
               }`}
             >
               <Icon className="w-4 h-4" />
@@ -278,7 +278,7 @@ export const OrderHistoryView: React.FC = () => {
           {[1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="bg-white rounded-2xl border border-zinc-200/60 p-5 animate-pulse shadow-card"
+              className="bg-white rounded-2xl border border-zinc-200/60 p-5 animate-pulse shadow-sm"
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
@@ -299,20 +299,20 @@ export const OrderHistoryView: React.FC = () => {
         </div>
       ) : error ? (
         // ERROR STATE
-        <div className="text-center py-16 bg-white rounded-3xl border border-zinc-200/60 p-8 shadow-card">
+        <div className="text-center py-16 bg-white rounded-3xl border border-zinc-200/60 p-8 shadow-sm">
           <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-3" />
           <h3 className="text-base font-bold text-zinc-900">Erro ao carregar pedidos</h3>
           <p className="text-zinc-500 text-xs mt-1 mb-4">{error}</p>
           <button
             onClick={fetchOrders}
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 text-white font-bold text-xs transition shadow-brand-glow active:scale-95"
+            className="px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs transition-all shadow-sm active:scale-[0.98]"
           >
             Tentar Novamente
           </button>
         </div>
       ) : filteredOrders.length === 0 ? (
         // EMPTY STATE
-        <div className="text-center py-16 bg-white rounded-3xl border border-zinc-200/60 p-8 shadow-card">
+        <div className="text-center py-16 bg-white rounded-3xl border border-zinc-200/60 p-8 shadow-sm">
           <div className="w-16 h-16 rounded-2xl bg-zinc-50 border border-zinc-200 flex items-center justify-center mx-auto mb-4">
             <Package className="w-7 h-7 text-zinc-300" />
           </div>
@@ -333,7 +333,7 @@ export const OrderHistoryView: React.FC = () => {
           {activeTab === 'all' && (
             <button
               onClick={() => {}} // Navegar para cardápio — controlado pelo App
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 text-white font-bold text-xs transition shadow-brand-glow active:scale-95"
+              className="px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs transition-all shadow-sm active:scale-[0.98]"
             >
               <ShoppingBag className="w-4 h-4 inline mr-1.5" />
               Fazer meu primeiro pedido
@@ -352,16 +352,16 @@ export const OrderHistoryView: React.FC = () => {
             return (
               <div
                 key={order.id}
-                className="bg-white rounded-2xl border border-zinc-200/60 p-5 shadow-card hover:shadow-card-hover hover:border-zinc-300 transition-all group"
+                className="bg-white rounded-2xl border border-zinc-200/60 p-5 shadow-sm hover:shadow-md hover:border-zinc-300 transition-all group"
               >
                 <div className="flex items-center justify-between mb-2.5">
                   <div className="flex items-center gap-3">
                     {/* Monograma do restaurante */}
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-50 to-amber-50 border border-zinc-200/60 flex items-center justify-center text-xs font-black text-brand-600 flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200/60 flex items-center justify-center text-xs font-bold text-orange-600 flex-shrink-0">
                       {order.restaurant?.name?.slice(0, 2).toUpperCase() || 'DH'}
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-zinc-900 group-hover:text-brand-600 transition-colors">
+                      <h4 className="text-sm font-bold text-zinc-900 group-hover:text-orange-600 transition-colors">
                         {order.restaurant?.name || 'Restaurante'}
                       </h4>
                       <p className="text-[11px] text-zinc-400 flex items-center gap-1.5">

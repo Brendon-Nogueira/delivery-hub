@@ -135,7 +135,7 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({
 
         {/* Badge */}
         {quantityInCart > 0 && (
-          <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-gradient-to-r from-brand-600 to-brand-500 text-white text-xs font-black px-3 py-1 rounded-full shadow-brand-glow animate-fadeIn">
+          <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm animate-fadeIn">
             <Check className="w-3.5 h-3.5 stroke-[3]" />
             <span>{quantityInCart} na sacola</span>
           </div>
@@ -145,7 +145,7 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({
       {/* Informações do Item */}
       <div className="flex flex-1 flex-col justify-between p-4 pt-3">
         <div>
-          <h3 className="text-base font-bold text-zinc-900 group-hover:text-brand-600 transition-colors line-clamp-1">
+          <h3 className="text-base font-bold text-zinc-900 group-hover:text-orange-600 transition-colors line-clamp-1">
             {item.name}
           </h3>
           {item.description ? (
@@ -175,7 +175,7 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({
               <button
                 type="button"
                 onClick={() => onRemoveFromCart(item)}
-                className="w-7 h-7 rounded-lg bg-white hover:bg-zinc-100 text-zinc-600 flex items-center justify-center transition active:scale-90 border border-zinc-200"
+                className="w-7 h-7 rounded-lg bg-white hover:bg-zinc-100 text-zinc-600 flex items-center justify-center transition-all active:scale-[0.98] border border-zinc-200"
                 title="Diminuir"
               >
                 <Minus className="w-3.5 h-3.5" />
@@ -186,7 +186,7 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({
               <button
                 type="button"
                 onClick={() => onAddToCart(item)}
-                className="w-7 h-7 rounded-lg bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-amber-500 text-white flex items-center justify-center transition active:scale-90 shadow-sm"
+                className="w-7 h-7 rounded-lg bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center transition-all active:scale-[0.98] shadow-sm"
                 title="Aumentar"
               >
                 <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -196,7 +196,7 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({
             <button
               type="button"
               onClick={() => onAddToCart(item)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-amber-500 text-white font-bold text-xs transition-all shadow-brand-glow active:scale-95"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs transition-all shadow-sm active:scale-[0.98]"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>Adicionar</span>

@@ -18,6 +18,8 @@ import { CartDrawer, CartItem } from '../components/CartDrawer';
 import { MapTracker } from '../components/MapTracker';
 import { apiFetch } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useAddress } from '../contexts/AddressContext';
+import { resolveOrderCoordinates } from '../services/geocodingService';
 import { AuthModal } from '../components/AuthModal';
 
 export type OrderStatus = 'PENDING' | 'PREPARING' | 'READY' | 'ON_THE_WAY' | 'DELIVERED';
@@ -66,6 +68,8 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
   restaurantId,
 }) => {
   const { isAuthenticated, quickLogin } = useAuth();
+  const { address } = useAddress();
+  const [orderCoords, setOrderCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   // Estados do Cardápio & Restaurante
   const [restaurant, setRestaurant] = useState<any>(null);
@@ -81,6 +85,24 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
   const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CARTAO' | 'DINHEIRO'>('PIX');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+
+  // Resolução de endereço e coordenadas reais do pedido ativo
+  useEffect(() => {
+    if (activeOrder?.notes) {
+      resolveOrderCoordinates(activeOrder.notes).then((coords) => setOrderCoords(coords));
+    } else {
+      setOrderCoords(null);
+    }
+  }, [activeOrder?.notes]);
+
+  const extractDeliveryAddress = (notes?: string) => {
+    if (!notes) return address.formattedAddress;
+    const match = notes.match(/\[Entrega:\s*(.*?)(\s*\|\s*GPS:[^\]]*)?\]/);
+    return match && match[1] ? match[1].trim() : address.formattedAddress;
+  };
+
+  const destinationAddress = extractDeliveryAddress(activeOrder?.notes);
+  const destinationLocation = orderCoords || customerLocation;
 
   // Carregar dados do restaurante e cardápio
   useEffect(() => {
@@ -219,7 +241,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
               </h2>
               <p className="text-xs text-zinc-400 flex items-center gap-1.5 mt-1">
                 <MapPin className="w-3.5 h-3.5 text-brand-500" />
-                <span>Destino: {restaurant?.address || 'Paraisópolis - MG'}</span>
+                <span>Destino: {destinationAddress}</span>
               </p>
             </div>
 
@@ -231,7 +253,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
           </div>
 
           {/* Banner do Status Atual */}
-          <div className="p-5 rounded-2xl border border-zinc-100 bg-gradient-to-r from-zinc-50 via-white to-zinc-50 mb-8 relative overflow-hidden">
+          <div className="p-5 rounded-2xl border border-zinc-200/60 bg-zinc-50 mb-8 relative overflow-hidden">
             <div className="flex items-center gap-3">
               <div className="relative">
                 <div className={`w-3.5 h-3.5 rounded-full ${statusColors[orderStatus]}`} />
@@ -271,7 +293,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                     key={step}
                     className={`flex flex-col items-center p-3.5 rounded-2xl border text-center transition-all ${
                       isActive
-                        ? 'border-brand-300 bg-brand-50 text-zinc-900 shadow-brand-glow'
+                        ? 'border-orange-300 bg-orange-50 text-zinc-900 shadow-sm'
                         : isPast
                         ? 'border-emerald-200 bg-emerald-50 text-zinc-700'
                         : 'border-zinc-200/60 bg-zinc-50 text-zinc-400'
@@ -280,7 +302,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                     <div
                       className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black mb-2 transition-all ${
                         isActive
-                          ? 'bg-gradient-to-tr from-brand-600 to-amber-500 text-white shadow-sm scale-110'
+                          ? 'bg-orange-500 text-white shadow-sm scale-110'
                           : isPast
                           ? 'bg-emerald-100 text-emerald-600'
                           : 'bg-zinc-100 text-zinc-400'
@@ -296,15 +318,17 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
           </div>
 
           {/* Mapa do Leaflet */}
-          <div className="rounded-2xl overflow-hidden border border-zinc-200 shadow-card h-[380px] mb-6">
+          <div className="rounded-2xl overflow-hidden border border-zinc-200 shadow-sm h-[380px] mb-6">
             <MapTracker
               restaurantLocation={{
                 lat: restaurant?.latitude || restaurantLocation.lat,
                 lng: restaurant?.longitude || restaurantLocation.lng,
               }}
-              customerLocation={customerLocation}
+              customerLocation={destinationLocation}
               driverLocation={driverLocation}
               orderStatus={orderStatus}
+              customerAddressName={destinationAddress}
+              restaurantName={restaurant?.name || 'Restaurante'}
             />
           </div>
 
@@ -319,7 +343,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
             {onResetOrder && (
               <button
                 onClick={onResetOrder}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-amber-500 text-white font-bold text-xs transition shadow-brand-glow active:scale-95"
+                className="px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs transition-all shadow-sm active:scale-[0.98]"
               >
                 {orderStatus === 'DELIVERED' ? 'Fazer Novo Pedido' : 'Ver Cardápio'}
               </button>
@@ -365,8 +389,8 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
         <div className="relative px-6 pb-6 pt-2 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="flex items-start md:items-center gap-4">
             {/* Logo do Restaurante */}
-            <div className="-mt-14 md:-mt-16 w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-white border-4 border-white shadow-card-hover overflow-hidden flex items-center justify-center flex-shrink-0">
-              <span className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-tr from-brand-500 to-amber-400 tracking-tighter">
+            <div className="-mt-14 md:-mt-16 w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-white border-4 border-white shadow-sm overflow-hidden flex items-center justify-center flex-shrink-0">
+              <span className="text-2xl md:text-3xl font-extrabold text-orange-500 tracking-tighter">
                 {restaurant?.name ? restaurant.name.substring(0, 2).toUpperCase() : 'RP'}
               </span>
             </div>
@@ -397,7 +421,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                   <span>{restaurant?.deliveryTime || '30 - 45 min'}</span>
                 </span>
                 <span className="flex items-center gap-1.5 bg-zinc-50 px-3 py-1.5 rounded-xl border border-zinc-200/60 shadow-sm">
-                  <Bike className="w-3.5 h-3.5 text-brand-500" />
+                  <Bike className="w-3.5 h-3.5 text-orange-500" />
                   <span>
                     {Number(restaurant?.deliveryFee) === 0 
                       ? 'Entrega Grátis' 
@@ -413,7 +437,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
           {totalCartCount > 0 && (
             <button
               onClick={() => setIsDrawerOpen(true)}
-              className="flex items-center justify-between gap-3 px-5 py-3 rounded-2xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-amber-500 text-white font-bold text-sm shadow-brand-glow active:scale-95 transition"
+              className="flex items-center justify-between gap-3 px-5 py-3 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm shadow-sm active:scale-[0.98] transition-all"
             >
               <div className="flex items-center gap-2">
                 <ShoppingBag className="w-4 h-4" />
@@ -437,7 +461,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar pratos, bebidas ou sobremesas..."
-            className="w-full bg-white border border-zinc-200/60 rounded-2xl pl-10 pr-9 py-2.5 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition shadow-sm"
+            className="w-full bg-white border border-zinc-200/60 rounded-2xl pl-10 pr-9 py-2.5 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition shadow-sm"
           />
           {searchQuery && (
             <button
@@ -462,10 +486,10 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 active:scale-95 ${
+                className={`px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 active:scale-[0.98] ${
                   isSelected
-                    ? 'bg-gradient-to-r from-brand-600 to-brand-500 text-white shadow-brand-glow'
-                    : 'bg-white text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 border border-zinc-200/60'
+                    ? 'bg-orange-500 text-white shadow-sm'
+                    : 'bg-white text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 border border-zinc-200/60'
                 }`}
               >
                 <span>{cat}</span>
@@ -533,14 +557,14 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
       {/* Barra Flutuante de Sacola no Rodapé (Mobile / Desktop) */}
       {totalCartCount > 0 && !isDrawerOpen && (
         <div className="fixed bottom-6 left-4 right-4 max-w-lg mx-auto z-40 animate-slideUp">
-          <div className="flex items-center justify-between p-3.5 px-4 rounded-2xl bg-white/95 border border-zinc-200 shadow-drawer backdrop-blur-md">
+          <div className="flex items-center justify-between p-3.5 px-4 rounded-2xl bg-white/95 border border-zinc-200 shadow-xl backdrop-blur-md">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-amber-400 text-white flex items-center justify-center font-black text-sm shadow-brand-glow">
+              <div className="w-10 h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center font-bold text-sm shadow-sm">
                 {totalCartCount}
               </div>
               <div>
                 <span className="text-[11px] text-zinc-400 block font-medium">Total com entrega:</span>
-                <p className="text-base font-black text-zinc-900">
+                <p className="text-base font-extrabold text-zinc-900">
                   R$ {grandTotal.toFixed(2).replace('.', ',')}
                 </p>
               </div>
@@ -548,7 +572,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
 
             <button
               onClick={() => setIsDrawerOpen(true)}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-amber-500 text-white font-black text-xs transition shadow-brand-glow active:scale-95"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs transition-all shadow-sm active:scale-[0.98]"
             >
               <span>Ver Sacola</span>
               <ShoppingBag className="w-4 h-4" />

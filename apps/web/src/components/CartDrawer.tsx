@@ -205,7 +205,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                           <button
                             type="button"
                             onClick={() => onAddToCart(item)}
-                            className="w-6 h-6 rounded-lg bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-amber-500 text-white flex items-center justify-center transition active:scale-90 font-bold"
+                            className="w-6 h-6 rounded-lg bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center transition-all active:scale-[0.98] font-bold"
                           >
                             <Plus className="w-3 h-3" />
                           </button>
@@ -380,7 +380,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             <button
               onClick={onConfirmOrder}
               disabled={isLoading || !socketConnected}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-brand-600 via-brand-500 to-amber-500 hover:from-brand-500 hover:to-amber-500 active:scale-[0.98] text-white font-black text-sm transition-all shadow-brand-glow-lg disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-bold text-sm transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

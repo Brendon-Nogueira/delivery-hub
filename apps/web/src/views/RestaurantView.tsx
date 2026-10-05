@@ -179,7 +179,7 @@ export const RestaurantView: React.FC<RestaurantViewProps> = ({ orders, onUpdate
         {order.status === 'PENDING' && (
           <button
             onClick={() => handleAcceptOrder(order)}
-            className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-black py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-600/20 active:scale-95 text-xs"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.98] text-xs"
           >
             <CheckCircle className="w-4 h-4 stroke-[2.5]" />
             Aceitar & Imprimir Comanda
@@ -201,14 +201,14 @@ export const RestaurantView: React.FC<RestaurantViewProps> = ({ orders, onUpdate
                   createdAt: order.createdAt,
                 });
               }}
-              className="p-3 bg-zinc-50 hover:bg-zinc-100 text-zinc-600 rounded-xl transition border border-zinc-200 active:scale-95"
+              className="p-3 bg-zinc-50 hover:bg-zinc-100 text-zinc-600 rounded-xl transition border border-zinc-200 active:scale-[0.98]"
               title="Reimprimir Comanda Térmica"
             >
               <Printer className="w-4 h-4" />
             </button>
             <button
               onClick={() => handleOrderReady(order.id)}
-              className="flex-1 bg-gradient-to-r from-sky-600 to-sky-500 hover:from-sky-500 hover:to-sky-400 text-white font-black py-3 rounded-xl flex items-center justify-center gap-2 transition text-xs shadow-lg shadow-sky-600/20 active:scale-95"
+              className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all text-xs shadow-sm active:scale-[0.98]"
             >
               <Utensils className="w-4 h-4" />
               Marcar como Pronto
@@ -229,9 +229,9 @@ export const RestaurantView: React.FC<RestaurantViewProps> = ({ orders, onUpdate
   return (
     <div className="w-full max-w-6xl mx-auto flex flex-col gap-6 animate-fadeIn pb-24">
       {/* KDS Header */}
-      <div className="bg-white rounded-2xl p-4 md:p-5 border border-zinc-200/60 flex flex-wrap items-center justify-between gap-4 shadow-card">
+      <div className="bg-white rounded-2xl p-4 md:p-5 border border-zinc-200/60 flex flex-wrap items-center justify-between gap-4 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-tr from-amber-600 to-amber-500 p-2.5 rounded-xl text-white shadow-lg shadow-amber-500/20">
+          <div className="bg-orange-500 p-2.5 rounded-xl text-white shadow-sm">
             <ChefHat className="w-6 h-6" />
           </div>
           <div>

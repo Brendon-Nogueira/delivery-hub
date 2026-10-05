@@ -51,7 +51,7 @@ const TABS: TabConfig[] = [
     label: 'Cardápio',
     icon: <ShoppingBag className="w-4 h-4" />,
     activeIconClass: 'text-white',
-    activeClass: 'bg-gradient-to-r from-brand-600 to-brand-500 text-white shadow-brand-glow',
+    activeClass: 'bg-orange-500 text-white shadow-sm',
     allowedRoles: ['CUSTOMER', null],
     showUnauthenticated: true,
   },
@@ -60,7 +60,7 @@ const TABS: TabConfig[] = [
     label: 'Meus Pedidos',
     icon: <ClipboardList className="w-4 h-4" />,
     activeIconClass: 'text-white',
-    activeClass: 'bg-gradient-to-r from-brand-600 to-brand-500 text-white shadow-brand-glow',
+    activeClass: 'bg-orange-500 text-white shadow-sm',
     allowedRoles: ['CUSTOMER'],
   },
   {
@@ -68,7 +68,7 @@ const TABS: TabConfig[] = [
     label: 'KDS',
     icon: <ChefHat className="w-4 h-4" />,
     activeIconClass: 'text-white',
-    activeClass: 'bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-lg shadow-amber-500/25',
+    activeClass: 'bg-orange-500 text-white shadow-sm',
     allowedRoles: ['RESTAURANT_OWNER'],
   },
   {
@@ -76,7 +76,7 @@ const TABS: TabConfig[] = [
     label: 'Gestão Cardápio',
     icon: <UtensilsCrossed className="w-4 h-4" />,
     activeIconClass: 'text-white',
-    activeClass: 'bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-lg shadow-amber-500/25',
+    activeClass: 'bg-orange-500 text-white shadow-sm',
     allowedRoles: ['RESTAURANT_OWNER'],
   },
   {
@@ -84,7 +84,7 @@ const TABS: TabConfig[] = [
     label: 'Dashboard',
     icon: <BarChart3 className="w-4 h-4" />,
     activeIconClass: 'text-white',
-    activeClass: 'bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-lg shadow-amber-500/25',
+    activeClass: 'bg-orange-500 text-white shadow-sm',
     allowedRoles: ['RESTAURANT_OWNER'],
   },
   {
@@ -92,7 +92,7 @@ const TABS: TabConfig[] = [
     label: 'Entregas',
     icon: <Bike className="w-4 h-4" />,
     activeIconClass: 'text-white',
-    activeClass: 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-500/25',
+    activeClass: 'bg-orange-500 text-white shadow-sm',
     allowedRoles: ['DRIVER'],
   },
 ];
@@ -117,7 +117,7 @@ export const RoleNavigation: React.FC<RoleNavigationProps> = ({
   });
 
   return (
-    <nav className="inline-flex items-center p-1.5 bg-white border border-zinc-200/60 rounded-2xl shadow-card gap-1 flex-wrap">
+    <nav className="inline-flex items-center p-1.5 bg-white border border-zinc-200/60 rounded-2xl shadow-sm gap-1 flex-wrap">
       {visibleTabs.map((tab) => {
         const isActive = currentRole === tab.role;
 
@@ -125,10 +125,10 @@ export const RoleNavigation: React.FC<RoleNavigationProps> = ({
           <button
             key={tab.role}
             onClick={() => onChangeRole(tab.role)}
-            className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 ${
+            className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-[0.98] ${
               isActive
                 ? tab.activeClass
-                : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50'
+                : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100/70'
             }`}
           >
             <span className={isActive ? tab.activeIconClass : 'text-zinc-400'}>

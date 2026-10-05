@@ -34,9 +34,10 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({ currentStatus, onA
         {onAdvanceStatus && activeIndex < ORDER_STAGES.length - 1 && (
           <button
             onClick={onAdvanceStatus}
-            className="flex items-center gap-2 bg-gradient-to-r from-brand-600 to-amber-500 hover:from-brand-500 hover:to-amber-400 text-white font-black px-4 py-2 rounded-xl text-xs transition shadow-brand-glow active:scale-95"
+            className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-sm active:scale-[0.98]"
           >
-            Avançar Status ➔
+            <span>Avançar Status</span>
+            <CheckCircle2 className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
@@ -46,7 +47,7 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({ currentStatus, onA
         {/* Barra de progresso ao fundo */}
         <div className="absolute top-5 left-4 right-4 h-1 bg-zinc-800 -z-0 rounded-full">
           <div
-            className="h-full bg-gradient-to-r from-brand-500 via-amber-400 to-emerald-400 transition-all duration-500 rounded-full"
+            className="h-full bg-orange-500 transition-all duration-500 rounded-full"
             style={{ width: `${(activeIndex / (ORDER_STAGES.length - 1)) * 100}%` }}
           />
         </div>
@@ -61,9 +62,9 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({ currentStatus, onA
               <div
                 className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-300 ${
                   isCurrent
-                    ? 'bg-gradient-to-tr from-brand-600 to-amber-500 text-white font-black ring-4 ring-brand-500/30 shadow-brand-glow scale-110'
+                    ? 'bg-orange-500 text-white font-bold ring-4 ring-orange-500/20 shadow-sm scale-110'
                     : isCompleted
-                    ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
+                    ? 'bg-emerald-600 text-white shadow-sm'
                     : 'bg-zinc-800 text-zinc-500 border border-zinc-700/80'
                 }`}
               >
@@ -71,7 +72,7 @@ export const StatusStepper: React.FC<StatusStepperProps> = ({ currentStatus, onA
               </div>
               <span
                 className={`text-[11px] font-bold mt-2.5 whitespace-nowrap ${
-                  isCurrent ? 'text-brand-400' : isCompleted ? 'text-zinc-200' : 'text-zinc-500'
+                  isCurrent ? 'text-orange-400' : isCompleted ? 'text-zinc-200' : 'text-zinc-500'
                 }`}
               >
                 {stage.label}

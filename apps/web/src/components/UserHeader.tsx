@@ -34,7 +34,7 @@ export const UserHeader: React.FC = () => {
         {/* Logo da Marca */}
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 via-brand-500 to-amber-400 flex items-center justify-center text-white shadow-brand-glow">
+            <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center text-white shadow-sm">
               <ShoppingBag className="w-5 h-5" />
             </div>
             <span className="absolute -bottom-1 -right-1 flex h-3 w-3">
@@ -46,9 +46,9 @@ export const UserHeader: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xl font-extrabold tracking-tight text-zinc-900">
-                Delivery<span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-amber-500">Hub</span>
+                Delivery<span className="text-orange-500">Hub</span>
               </span>
-              <span className="hidden sm:inline-flex text-[9px] uppercase font-bold tracking-widest text-brand-600 bg-brand-50 border border-brand-200 px-2 py-0.5 rounded-full">
+              <span className="hidden sm:inline-flex text-[9px] uppercase font-bold tracking-widest text-orange-600 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full">
                 Live
               </span>
             </div>
@@ -62,10 +62,10 @@ export const UserHeader: React.FC = () => {
         <button
           type="button"
           onClick={openAddressModal}
-          className="hidden md:flex items-center gap-2.5 text-xs text-zinc-600 bg-zinc-50 hover:bg-brand-50/50 px-4 py-2 rounded-xl border border-zinc-200/60 hover:border-brand-300 transition cursor-pointer active:scale-95 group text-left"
+          className="hidden md:flex items-center gap-2.5 text-xs text-zinc-600 bg-zinc-50 hover:bg-orange-50/50 px-4 py-2 rounded-xl border border-zinc-200/60 hover:border-orange-300 transition-all cursor-pointer active:scale-[0.98] group text-left"
           title="Clique para alterar o endereço de entrega"
         >
-          <div className="w-6 h-6 rounded-lg bg-brand-50 text-brand-500 group-hover:bg-brand-500 group-hover:text-white flex items-center justify-center flex-shrink-0 transition">
+          <div className="w-6 h-6 rounded-lg bg-orange-50 text-orange-500 group-hover:bg-orange-500 group-hover:text-white flex items-center justify-center flex-shrink-0 transition-colors">
             <MapPin className="w-3.5 h-3.5" />
           </div>
           <div>
@@ -74,7 +74,7 @@ export const UserHeader: React.FC = () => {
               {formatAddressSummary(address)}
             </span>
           </div>
-          <ChevronDown className="w-3.5 h-3.5 text-zinc-400 group-hover:text-brand-500 transition ml-1" />
+          <ChevronDown className="w-3.5 h-3.5 text-zinc-400 group-hover:text-orange-500 transition-colors ml-1" />
         </button>
 
         {/* Área do Usuário */}
@@ -82,7 +82,7 @@ export const UserHeader: React.FC = () => {
           {isAuthenticated && user ? (
             <div className="flex items-center gap-2.5">
               <div className="flex items-center gap-2.5 bg-zinc-50 py-1.5 px-3 rounded-xl border border-zinc-200/60">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-amber-500 text-white flex items-center justify-center text-xs font-black shadow-sm">
+                <div className="w-8 h-8 rounded-lg bg-orange-500 text-white flex items-center justify-center text-xs font-black shadow-sm">
                   {user.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="text-left hidden sm:block">
@@ -102,7 +102,7 @@ export const UserHeader: React.FC = () => {
 
               <button
                 onClick={() => openAuth('login')}
-                className="text-xs font-medium text-zinc-500 hover:text-zinc-900 px-3 py-2 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200/60 transition active:scale-95"
+                className="text-xs font-medium text-zinc-500 hover:text-zinc-900 px-3 py-2 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200/60 transition-all active:scale-[0.98]"
                 title="Trocar de conta"
               >
                 Trocar
@@ -110,7 +110,7 @@ export const UserHeader: React.FC = () => {
 
               <button
                 onClick={logout}
-                className="p-2 rounded-xl text-zinc-400 hover:text-rose-500 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition active:scale-95"
+                className="p-2 rounded-xl text-zinc-400 hover:text-rose-500 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-all active:scale-[0.98]"
                 title="Sair da conta"
               >
                 <LogOut className="w-4 h-4" />
@@ -119,7 +119,7 @@ export const UserHeader: React.FC = () => {
           ) : (
             <button
               onClick={() => openAuth('login')}
-              className="flex items-center gap-2 text-xs font-bold text-white bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-amber-500 px-4 py-2.5 rounded-xl transition shadow-brand-glow active:scale-95"
+              className="flex items-center gap-2 text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 px-4 py-2.5 rounded-xl transition-all shadow-sm active:scale-[0.98]"
             >
               <LogIn className="w-4 h-4" />
               <span>Entrar / Cadastrar</span>

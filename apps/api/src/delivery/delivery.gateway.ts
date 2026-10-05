@@ -86,6 +86,16 @@ export class DeliveryGateway implements OnGatewayConnection, OnGatewayDisconnect
   }
 
   /**
+   * Notifica que o entregador chegou exatamente no endereço do cliente
+   */
+  emitDriverArrived(orderId: string) {
+    if (this.server) {
+      this.server.to(`order:${orderId}`).emit('driverArrived', { orderId, arrivedAt: new Date().toISOString() });
+      this.server.emit('driverArrived', { orderId, arrivedAt: new Date().toISOString() });
+    }
+  }
+
+  /**
    * joinDeliveryRoom — Cliente ou entregador entra na room de um pedido.
    *
    * O CLIENTE chama isso assim que abre a tela de rastreamento.

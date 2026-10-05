@@ -89,6 +89,13 @@ class AudioSynthesizer {
   }
 
   /**
+   * Toca som suave de notificação de chegada do entregador
+   */
+  playNotificationSound() {
+    this.playDingDong();
+  }
+
+  /**
    * Inicia o alarme contínuo de Novo Pedido no Restaurante
    */
   startRestaurantAlarm() {

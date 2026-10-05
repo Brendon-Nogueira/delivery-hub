@@ -200,3 +200,49 @@ export async function reverseGeocode(
     return null;
   }
 }
+
+/**
+ * Extrai ou resolve coordenadas precisas de um pedido a partir do campo notes
+ */
+export async function resolveOrderCoordinates(
+  notes?: string | null
+): Promise<{ lat: number; lng: number }> {
+  if (!notes) {
+    return { lat: DEFAULT_PARAISOPOLIS_LOCATION.lat, lng: DEFAULT_PARAISOPOLIS_LOCATION.lng };
+  }
+
+  // 1. Tenta extrair tag GPS:lat,lng direta
+  const gpsMatch = notes.match(/GPS:\s*([-\d.]+)\s*,\s*([-\d.]+)/);
+  if (gpsMatch) {
+    const lat = parseFloat(gpsMatch[1]);
+    const lng = parseFloat(gpsMatch[2]);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      return { lat, lng };
+    }
+  }
+
+  // 2. Tenta extrair o endereço de [Entrega: ...]
+  const match = notes.match(/\[Entrega:\s*(.*?)\]/);
+  const addressText = match ? match[1] : notes;
+
+  // Verifica se é Rua Sabará (exemplo comum de teste)
+  if (addressText.toLowerCase().includes('sabará') || addressText.toLowerCase().includes('sabara')) {
+    return { lat: -22.54384, lng: -45.76853 };
+  }
+
+  // Verifica se bate com algum preset
+  for (const preset of PRESET_ADDRESSES) {
+    if (addressText.toLowerCase().includes(preset.street.toLowerCase())) {
+      return { lat: preset.lat, lng: preset.lng };
+    }
+  }
+
+  // 3. Geocodifica o endereço via Nominatim
+  const cleanedStreet = addressText.split('-')[0].split(',')[0].trim();
+  const geo = await geocodeAddress(cleanedStreet, 'Paraisópolis', 'MG');
+  if (geo) {
+    return { lat: geo.lat, lng: geo.lng };
+  }
+
+  return { lat: DEFAULT_PARAISOPOLIS_LOCATION.lat, lng: DEFAULT_PARAISOPOLIS_LOCATION.lng };
+}

@@ -9,6 +9,11 @@ export interface DriverLocation {
   lat: number;
   lng: number;
   timestamp: string;
+  stepIndex?: number;
+  totalSteps?: number;
+  progressPercent?: number;
+  isArrived?: boolean;
+  streetName?: string;
 }
 
 /**

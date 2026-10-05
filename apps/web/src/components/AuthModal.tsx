@@ -110,7 +110,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               setError(null);
             }}
             className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-              mode === 'login' ? 'bg-gradient-to-r from-brand-600 to-brand-500 text-white shadow-brand-glow' : 'text-zinc-500 hover:text-zinc-900'
+              mode === 'login' ? 'bg-orange-500 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-900'
             }`}
           >
             Entrar
@@ -122,7 +122,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               setError(null);
             }}
             className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-              mode === 'register' ? 'bg-gradient-to-r from-brand-600 to-brand-500 text-white shadow-brand-glow' : 'text-zinc-500 hover:text-zinc-900'
+              mode === 'register' ? 'bg-orange-500 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-900'
             }`}
           >
             Cadastrar
@@ -229,7 +229,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full mt-4 py-3.5 rounded-xl bg-gradient-to-r from-brand-600 via-brand-500 to-amber-500 hover:from-brand-500 hover:to-amber-500 active:scale-95 text-white font-black text-xs transition-all shadow-brand-glow disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full mt-4 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-bold text-xs transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isLoading ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

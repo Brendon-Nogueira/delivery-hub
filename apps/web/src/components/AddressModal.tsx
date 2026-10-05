@@ -227,7 +227,7 @@ export const AddressModal: React.FC = () => {
 
         {/* Título & Ícone */}
         <div className="flex items-center gap-3 mb-5">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-brand-500 to-amber-500 text-white flex items-center justify-center shadow-brand-glow flex-shrink-0">
+          <div className="w-11 h-11 rounded-2xl bg-orange-500 text-white flex items-center justify-center shadow-sm flex-shrink-0">
             <MapPin className="w-6 h-6 stroke-[2.5]" />
           </div>
           <div>
@@ -398,7 +398,7 @@ export const AddressModal: React.FC = () => {
           {/* Botão de Confirmação */}
           <button
             type="submit"
-            className="w-full mt-3 py-3 rounded-2xl bg-gradient-to-r from-brand-600 via-brand-500 to-amber-500 hover:from-brand-500 hover:to-amber-500 active:scale-95 text-white font-black text-xs transition-all shadow-brand-glow flex items-center justify-center gap-2"
+            className="w-full mt-3 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-2"
           >
             <Check className="w-4 h-4 stroke-[3]" />
             <span>Confirmar Este Endereço de Entrega</span>

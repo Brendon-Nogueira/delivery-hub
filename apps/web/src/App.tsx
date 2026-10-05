@@ -70,7 +70,7 @@ function AppContent() {
   // Pedidos e Telemetria
   const [orders, setOrders] = useState<RestaurantOrder[]>([]);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
-  const [driverLocation, setDriverLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [driverLocation, setDriverLocation] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   /**
@@ -287,13 +287,37 @@ function AppContent() {
 
     ordSocket.on('orderStatusChanged', handleStatusChanged);
 
-    // Telemetria do entregador (GPS)
-    const handleLocationUpdate = (data: { orderId: string; lat: number; lng: number }) => {
-      setDriverLocation({ lat: data.lat, lng: data.lng });
+    // Telemetria do entregador (GPS em Ruas Reais com OSRM)
+    const handleLocationUpdate = (data: any) => {
+      setDriverLocation({
+        lat: data.lat,
+        lng: data.lng,
+        stepIndex: data.stepIndex,
+        totalSteps: data.totalSteps,
+        progressPercent: data.progressPercent,
+        isArrived: data.isArrived,
+        streetName: data.streetName,
+        timestamp: data.timestamp,
+      });
+
+      if (data.isArrived) {
+        window.dispatchEvent(new CustomEvent('driver:arrived', { detail: data }));
+      }
     };
 
     dlvSocket.on('driverLocationUpdate', handleLocationUpdate);
     dlvSocket.on('locationUpdate', handleLocationUpdate);
+
+    dlvSocket.on('driverArrived', (data: { orderId: string }) => {
+      window.dispatchEvent(new CustomEvent('driver:arrived', { detail: data }));
+      addToast({
+        type: 'success',
+        title: 'Entregador no Local!',
+        message: 'O entregador chegou ao endereço com o pedido.',
+        duration: 8000,
+      });
+      audioSynth.playNotificationSound();
+    });
 
     dlvSocket.on('deliveryComplete', () => {
       setDriverLocation(null);
@@ -318,8 +342,17 @@ function AppContent() {
   useEffect(() => {
     if (ordersSocket && connected && currentOrderId) {
       ordersSocket.emit('joinOrderRoom', { orderId: currentOrderId });
+      deliverySocket?.emit('joinDeliveryRoom', { orderId: currentOrderId });
     }
-  }, [ordersSocket, connected, currentOrderId]);
+  }, [ordersSocket, deliverySocket, connected, currentOrderId]);
+
+  // Entrar na room de entrega quando houver corrida ativa
+  useEffect(() => {
+    const activeDel = orders.find((o) => o.status === 'ON_THE_WAY' || o.status === 'READY');
+    if (deliverySocket && connected && activeDel) {
+      deliverySocket.emit('joinDeliveryRoom', { orderId: activeDel.id });
+    }
+  }, [orders, deliverySocket, connected]);
 
   // Criar pedido
   const handleCreateOrder = async (
@@ -341,7 +374,7 @@ function AppContent() {
         await quickLogin('CUSTOMER');
       }
 
-      const addressHeader = `[Entrega: ${address.formattedAddress}]`;
+      const addressHeader = `[Entrega: ${address.formattedAddress} | GPS:${address.lat},${address.lng}]`;
       const combinedNotes = notes ? `${addressHeader} • Obs: ${notes}` : addressHeader;
 
       const data = await apiFetch<any>('/api/v1/orders', {
@@ -419,6 +452,9 @@ function AppContent() {
       title: 'Corrida Aceita!',
       message: 'Navegue até o restaurante para coletar o pedido.',
     });
+
+    // Inicia simulação visual no mapa imediatamente
+    window.dispatchEvent(new CustomEvent('map:start-simulation'));
 
     try {
       await apiFetch(`/api/v1/delivery/simulate-trip/${orderId}`, { method: 'POST' });

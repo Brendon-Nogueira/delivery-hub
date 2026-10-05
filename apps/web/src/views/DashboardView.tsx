@@ -137,7 +137,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ restaurantId }) =>
       {/* KPI Cards em Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card: Faturamento */}
-        <div className="bg-gradient-to-br from-emerald-500/10 via-white to-white p-5 rounded-2xl border border-emerald-200/80 shadow-sm relative overflow-hidden">
+        <div className="bg-white p-5 rounded-2xl border border-emerald-200/80 shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">
               Faturamento Total
@@ -297,8 +297,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ restaurantId }) =>
                         <div
                           className={`h-full rounded-full transition-all duration-500 ${
                             isGold
-                              ? 'bg-gradient-to-r from-amber-400 to-amber-500'
-                              : 'bg-brand-500'
+                              ? 'bg-amber-500'
+                              : 'bg-orange-500'
                           }`}
                           style={{ width: `${percentage}%` }}
                         ></div>
