@@ -1,24 +1,21 @@
 import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ShoppingBag, ChefHat, Bike, ClipboardList, UtensilsCrossed, BarChart3 } from 'lucide-react';
 
 /**
  * CONCEITO: (Role-Based Access Control) no Frontend
  *
  * Cada role do sistema só pode ver e acessar as tabs que lhe pertencem.
- * Isso é diferente de segurança no backend (guards)
- *
- * A segurança está no backend (JwtAuthGuard + RolesGuard).
- * O frontend apenas esconde elementos que o usuário não deveria ver.
- *
+ * Integrado com React Router para suporte a histórico do navegador e URLs amigáveis.
  */
 
 export type Role = 'CUSTOMER' | 'RESTAURANT' | 'DRIVER' | 'HISTORY' | 'MANAGEMENT' | 'DASHBOARD';
-
 
 export type UserRole = 'CUSTOMER' | 'RESTAURANT_OWNER' | 'DRIVER' | 'ADMIN' | null;
 
 interface TabConfig {
   role: Role;
+  path: string;
   label: string;
   icon: React.ReactNode;
   activeIconClass: string;
@@ -48,6 +45,7 @@ interface RoleNavigationProps {
 const TABS: TabConfig[] = [
   {
     role: 'CUSTOMER',
+    path: '/',
     label: 'Cardápio',
     icon: <ShoppingBag className="w-4 h-4" />,
     activeIconClass: 'text-white',
@@ -57,6 +55,7 @@ const TABS: TabConfig[] = [
   },
   {
     role: 'HISTORY',
+    path: '/pedidos',
     label: 'Meus Pedidos',
     icon: <ClipboardList className="w-4 h-4" />,
     activeIconClass: 'text-white',
@@ -65,6 +64,7 @@ const TABS: TabConfig[] = [
   },
   {
     role: 'RESTAURANT',
+    path: '/kds',
     label: 'KDS',
     icon: <ChefHat className="w-4 h-4" />,
     activeIconClass: 'text-white',
@@ -73,6 +73,7 @@ const TABS: TabConfig[] = [
   },
   {
     role: 'MANAGEMENT',
+    path: '/gestao',
     label: 'Gestão Cardápio',
     icon: <UtensilsCrossed className="w-4 h-4" />,
     activeIconClass: 'text-white',
@@ -81,6 +82,7 @@ const TABS: TabConfig[] = [
   },
   {
     role: 'DASHBOARD',
+    path: '/dashboard',
     label: 'Dashboard',
     icon: <BarChart3 className="w-4 h-4" />,
     activeIconClass: 'text-white',
@@ -89,6 +91,7 @@ const TABS: TabConfig[] = [
   },
   {
     role: 'DRIVER',
+    path: '/entregas',
     label: 'Entregas',
     icon: <Bike className="w-4 h-4" />,
     activeIconClass: 'text-white',
@@ -103,6 +106,8 @@ export const RoleNavigation: React.FC<RoleNavigationProps> = ({
   pendingOrdersCount = 0,
   userRole = null,
 }) => {
+  const navigate = useNavigate();
+
   /**
    * CONCEITO: Filtragem por permissão
    * Cada tab declara quais roles podem vê-la.
@@ -116,6 +121,11 @@ export const RoleNavigation: React.FC<RoleNavigationProps> = ({
     return tab.allowedRoles.includes(userRole);
   });
 
+  const handleTabClick = (tab: TabConfig) => {
+    onChangeRole(tab.role);
+    navigate(tab.path);
+  };
+
   return (
     <nav className="inline-flex items-center p-1.5 bg-white border border-zinc-200/60 rounded-2xl shadow-sm gap-1 flex-wrap">
       {visibleTabs.map((tab) => {
@@ -124,7 +134,7 @@ export const RoleNavigation: React.FC<RoleNavigationProps> = ({
         return (
           <button
             key={tab.role}
-            onClick={() => onChangeRole(tab.role)}
+            onClick={() => handleTabClick(tab)}
             className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-[0.98] ${
               isActive
                 ? tab.activeClass

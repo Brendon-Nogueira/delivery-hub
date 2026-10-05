@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { ShoppingBag, LogIn, LogOut, MapPin, User, ChevronDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useAddress } from '../contexts/AddressContext';
+import { useCart } from '../contexts/CartContext';
 import { AuthModal } from './AuthModal';
 
 export const UserHeader: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const { address, openAddressModal, formatAddressSummary } = useAddress();
+  const { totalCount, openDrawer } = useCart();
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'login' | 'register'>('login');
 
@@ -78,7 +80,22 @@ export const UserHeader: React.FC = () => {
         </button>
 
         {/* Área do Usuário */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
+          {totalCount > 0 && (
+            <button
+              type="button"
+              onClick={openDrawer}
+              className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-[0.98]"
+              title="Abrir sacola de pedidos"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              <span className="hidden sm:inline">Sacola</span>
+              <span className="bg-white text-brand-600 px-1.5 py-0.5 rounded-md text-[11px] font-black leading-none">
+                {totalCount}
+              </span>
+            </button>
+          )}
+
           {isAuthenticated && user ? (
             <div className="flex items-center gap-2.5">
               <div className="flex items-center gap-2.5 bg-zinc-50 py-1.5 px-3 rounded-xl border border-zinc-200/60">

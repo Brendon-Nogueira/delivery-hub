@@ -4,6 +4,8 @@ import { MapTracker } from '../components/MapTracker';
 import { resolveOrderCoordinates } from '../services/geocodingService';
 import { apiFetch } from '../utils/api';
 
+import { requestScreenWakeLock, releaseScreenWakeLock, triggerHaptic } from '../utils/hardware';
+
 type OrderStatus = 'PENDING' | 'PREPARING' | 'READY' | 'ON_THE_WAY' | 'DELIVERED';
 
 interface Order {
@@ -49,6 +51,18 @@ export const DriverView: React.FC<DriverViewProps> = ({
   const [isArrivedAtCustomer, setIsArrivedAtCustomer] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
 
+  // Mantém a tela do celular sempre ligada durante corrida ativa (Screen Wake Lock)
+  useEffect(() => {
+    if (activeDelivery) {
+      requestScreenWakeLock();
+    } else {
+      releaseScreenWakeLock();
+    }
+    return () => {
+      releaseScreenWakeLock();
+    };
+  }, [activeDelivery]);
+
   // Resolve as coordenadas exatas da entrega a partir do notes do pedido ativo
   useEffect(() => {
     if (activeDelivery?.notes) {
@@ -61,9 +75,12 @@ export const DriverView: React.FC<DriverViewProps> = ({
     }
   }, [activeDelivery?.notes]);
 
-  // Escuta chegada ao destino do entregador
+  // Escuta chegada ao destino do entregador e dispara vibração tátil
   useEffect(() => {
-    const handleArrived = () => setIsArrivedAtCustomer(true);
+    const handleArrived = () => {
+      setIsArrivedAtCustomer(true);
+      triggerHaptic([200, 100, 200]);
+    };
     window.addEventListener('driver:arrived', handleArrived);
     return () => window.removeEventListener('driver:arrived', handleArrived);
   }, []);
@@ -71,6 +88,7 @@ export const DriverView: React.FC<DriverViewProps> = ({
   useEffect(() => {
     if (driverLocation?.isArrived) {
       setIsArrivedAtCustomer(true);
+      triggerHaptic([200, 100, 200]);
     }
   }, [driverLocation?.isArrived]);
 
@@ -243,7 +261,11 @@ export const DriverView: React.FC<DriverViewProps> = ({
 
               {/* Botão de Finalizar */}
               <button 
-                onClick={() => onCompleteDelivery(activeDelivery.id)}
+                onClick={() => {
+                  triggerHaptic([100, 50, 100]);
+                  releaseScreenWakeLock();
+                  onCompleteDelivery(activeDelivery.id);
+                }}
                 className={`w-full font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm text-sm ${
                   isArrivedAtCustomer
                     ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/25 ring-4 ring-emerald-500/20'
@@ -306,7 +328,10 @@ export const DriverView: React.FC<DriverViewProps> = ({
                   </div>
 
                   <button 
-                    onClick={() => onAcceptDelivery(order.id)}
+                    onClick={() => {
+                      triggerHaptic(100);
+                      onAcceptDelivery(order.id);
+                    }}
                     className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition-all active:scale-[0.98] shadow-sm text-xs"
                   >
                     Aceitar Corrida • R$ 6,50

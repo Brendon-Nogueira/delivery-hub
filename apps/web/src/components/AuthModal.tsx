@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, LogIn, UserPlus, Mail, Lock, User, Phone, Sparkles } from 'lucide-react';
+import { X, LogIn, UserPlus, Mail, Lock, User, Phone, Sparkles, Fish, Sandwich, Pizza, IceCream } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 interface AuthModalProps {
@@ -298,8 +298,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 disabled={isLoading}
                 className="p-2 rounded-xl bg-zinc-50 hover:bg-amber-50 border border-zinc-200 text-left transition hover:border-amber-300 active:scale-95"
               >
-                <span className="block font-black text-zinc-800 text-[11px] leading-tight truncate">🍣 Sushi Hub</span>
-                <span className="text-[9px] text-zinc-400">dono@sushi-hub.com</span>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <Fish className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                  <span className="block font-black text-zinc-800 text-[11px] leading-tight truncate">Sushi Hub</span>
+                </div>
+                <span className="text-[9px] text-zinc-400 block truncate">dono@sushi-hub.com</span>
               </button>
 
               <button
@@ -308,8 +311,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 disabled={isLoading}
                 className="p-2 rounded-xl bg-zinc-50 hover:bg-amber-50 border border-zinc-200 text-left transition hover:border-amber-300 active:scale-95"
               >
-                <span className="block font-black text-zinc-800 text-[11px] leading-tight truncate">🍔 Smash Burger</span>
-                <span className="text-[9px] text-zinc-400">dono@restaurante.com</span>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <Sandwich className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                  <span className="block font-black text-zinc-800 text-[11px] leading-tight truncate">Smash Burger</span>
+                </div>
+                <span className="text-[9px] text-zinc-400 block truncate">dono@restaurante.com</span>
               </button>
 
               <button
@@ -318,8 +324,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 disabled={isLoading}
                 className="p-2 rounded-xl bg-zinc-50 hover:bg-amber-50 border border-zinc-200 text-left transition hover:border-amber-300 active:scale-95"
               >
-                <span className="block font-black text-zinc-800 text-[11px] leading-tight truncate">🍕 Bella Pizza</span>
-                <span className="text-[9px] text-zinc-400">dono@bella-pizza.com</span>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <Pizza className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                  <span className="block font-black text-zinc-800 text-[11px] leading-tight truncate">Bella Pizza</span>
+                </div>
+                <span className="text-[9px] text-zinc-400 block truncate">dono@bella-pizza.com</span>
               </button>
 
               <button
@@ -328,8 +337,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 disabled={isLoading}
                 className="p-2 rounded-xl bg-zinc-50 hover:bg-amber-50 border border-zinc-200 text-left transition hover:border-amber-300 active:scale-95"
               >
-                <span className="block font-black text-zinc-800 text-[11px] leading-tight truncate">🍧 Açaí Serra</span>
-                <span className="text-[9px] text-zinc-400">dono@acai-serra.com</span>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <IceCream className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+                  <span className="block font-black text-zinc-800 text-[11px] leading-tight truncate">Açaí Serra</span>
+                </div>
+                <span className="text-[9px] text-zinc-400 block truncate">dono@acai-serra.com</span>
               </button>
             </div>
           </div>

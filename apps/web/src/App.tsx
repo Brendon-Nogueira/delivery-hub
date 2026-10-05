@@ -1,20 +1,47 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { io, Socket } from 'socket.io-client';
+import React, { useEffect, useState, useCallback, Suspense } from 'react';
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useNavigate,
+  useLocation,
+  useParams,
+  Navigate,
+} from 'react-router-dom';
 import { RoleNavigation, Role, UserRole } from './components/RoleNavigation';
-import { CustomerView } from './views/CustomerView';
-import { RestaurantView, Order as RestaurantOrder } from './views/RestaurantView';
-import { DriverView } from './views/DriverView';
-import { OrderHistoryView } from './views/OrderHistoryView';
-import { MenuManagementView } from './views/MenuManagementView';
-import { DashboardView } from './views/DashboardView';
-import { MarketplaceView } from './views/MarketplaceView';
+import type { Order as RestaurantOrder } from './views/RestaurantView';
 import { audioSynth } from './utils/audio';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import { AddressProvider, useAddress } from './contexts/AddressContext';
+import { CartProvider } from './contexts/CartContext';
+import { SocketProvider, useSocket } from './contexts/SocketContext';
 import { AddressModal } from './components/AddressModal';
 import { UserHeader } from './components/UserHeader';
-import { apiFetch, API_BASE_URL } from './utils/api';
+import { apiFetch } from './utils/api';
+
+// Views principais 
+const CustomerView = React.lazy(() =>
+  import('./views/CustomerView').then((m) => ({ default: m.CustomerView })),
+);
+const MarketplaceView = React.lazy(() =>
+  import('./views/MarketplaceView').then((m) => ({ default: m.MarketplaceView })),
+);
+const RestaurantView = React.lazy(() =>
+  import('./views/RestaurantView').then((m) => ({ default: m.RestaurantView })),
+);
+const DriverView = React.lazy(() =>
+  import('./views/DriverView').then((m) => ({ default: m.DriverView })),
+);
+const OrderHistoryView = React.lazy(() =>
+  import('./views/OrderHistoryView').then((m) => ({ default: m.OrderHistoryView })),
+);
+const MenuManagementView = React.lazy(() =>
+  import('./views/MenuManagementView').then((m) => ({ default: m.MenuManagementView })),
+);
+const DashboardView = React.lazy(() =>
+  import('./views/DashboardView').then((m) => ({ default: m.DashboardView })),
+);
 
 type OrderStatus = 'PENDING' | 'PREPARING' | 'READY' | 'ON_THE_WAY' | 'DELIVERED';
 
@@ -26,30 +53,46 @@ export const mapToBackendStatus = (status: OrderStatus): string => {
 
 export const mapToFrontendStatus = (status: string): OrderStatus => {
   if (status === 'READY_FOR_PICKUP') return 'READY';
-  if (status === 'IN_TRANSIT' || status === 'PICKED_UP' || status === 'OUT_FOR_DELIVERY') return 'ON_THE_WAY';
+  if (status === 'IN_TRANSIT' || status === 'PICKED_UP' || status === 'OUT_FOR_DELIVERY')
+    return 'ON_THE_WAY';
   return status as OrderStatus;
 };
 
 /**
  * STATUS → MENSAGEM TOAST
- * Mapeia cada transição de status a uma mensagem de toast.
- * Conceito: Lookup table (Record) é mais limpo que um switch/case.
+ * Lookup table limpa para mensagens de transição
  */
-const statusToastMessages: Record<string, { title: string; message: string; type: 'success' | 'info' | 'warning' }> = {
-  PENDING: { title: 'Pedido Enviado!', message: 'Aguardando confirmação do restaurante.', type: 'info' },
-  PREPARING: { title: 'Pedido Aceito!', message: 'O restaurante começou a preparar seu prato.', type: 'success' },
-  READY: { title: 'Pedido Pronto!', message: 'Aguardando o entregador coletar.', type: 'info' },
-  ON_THE_WAY: { title: 'Saiu para Entrega!', message: 'O entregador está a caminho.', type: 'success' },
-  DELIVERED: { title: 'Pedido Entregue!', message: 'Bom apetite! Avalie seu pedido.', type: 'success' },
+const statusToastMessages: Record<
+  string,
+  { title: string; message: string; type: 'success' | 'info' | 'warning' }
+> = {
+  PENDING: {
+    title: 'Pedido Enviado!',
+    message: 'Aguardando confirmação do restaurante.',
+    type: 'info',
+  },
+  PREPARING: {
+    title: 'Pedido Aceito!',
+    message: 'O restaurante começou a preparar seu prato.',
+    type: 'success',
+  },
+  READY: {
+    title: 'Pedido Pronto!',
+    message: 'Aguardando o entregador coletar.',
+    type: 'info',
+  },
+  ON_THE_WAY: {
+    title: 'Saiu para Entrega!',
+    message: 'O entregador está a caminho.',
+    type: 'success',
+  },
+  DELIVERED: {
+    title: 'Pedido Entregue!',
+    message: 'Bom apetite! Avalie seu pedido.',
+    type: 'success',
+  },
 };
 
-/**
- * CONCEITO: Mapeamento de Role do backend → Role default da navegação
- *
- * Quando o usuário faz login, ele é automaticamente direcionado para
- * a tab principal de sua role. Isso elimina a confusão de ver abas
- * que não pertencem ao seu perfil.
- */
 const DEFAULT_ROLE_MAP: Record<string, Role> = {
   CUSTOMER: 'CUSTOMER',
   RESTAURANT_OWNER: 'RESTAURANT',
@@ -57,75 +100,153 @@ const DEFAULT_ROLE_MAP: Record<string, Role> = {
   ADMIN: 'RESTAURANT',
 };
 
-function AppContent() {
-  const { user, token, isAuthenticated, quickLogin } = useAuth();
-  const { addToast } = useToast();
-  const [currentRole, setCurrentRole] = useState<Role>('CUSTOMER');
 
-  // Sockets
-  const [ordersSocket, setOrdersSocket] = useState<Socket | null>(null);
-  const [deliverySocket, setDeliverySocket] = useState<Socket | null>(null);
-  const [connected, setConnected] = useState(false);
+const ViewLoadingSkeleton: React.FC = () => (
+  <div className="space-y-4 animate-fadeIn py-4">
+    <div className="h-9 bg-zinc-200/70 rounded-2xl animate-pulse w-48" />
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="h-44 bg-zinc-200/70 rounded-3xl animate-pulse" />
+      <div className="h-44 bg-zinc-200/70 rounded-3xl animate-pulse" />
+      <div className="h-44 bg-zinc-200/70 rounded-3xl animate-pulse" />
+    </div>
+    <div className="h-60 bg-zinc-200/70 rounded-3xl animate-pulse" />
+  </div>
+);
+
+/** Subcomponente que resolve se exibe Marketplace ou Menu do Restaurante */
+interface CustomerRouteWrapperProps {
+  connected: boolean;
+  activeCustomerOrder?: RestaurantOrder;
+  driverLocation: any;
+  restaurantLocation: { lat: number; lng: number };
+  customerLocation: { lat: number; lng: number };
+  onCreateOrder: (
+    items: Array<{ menuItemId: string; quantity: number }>,
+    notes?: string,
+  ) => Promise<void>;
+  isLoading: boolean;
+  onResetOrder: () => void;
+  restaurantId: string | null;
+  setRestaurantId: (id: string | null) => void;
+}
+
+const CustomerRouteWrapper: React.FC<CustomerRouteWrapperProps> = ({
+  connected,
+  activeCustomerOrder,
+  driverLocation,
+  restaurantLocation,
+  customerLocation,
+  onCreateOrder,
+  isLoading,
+  onResetOrder,
+  restaurantId,
+  setRestaurantId,
+}) => {
+  const { id } = useParams<{ id?: string }>();
+  const navigate = useNavigate();
+
+  const effectiveRestaurantId = id || activeCustomerOrder?.restaurantId || restaurantId;
+
+  if (!effectiveRestaurantId && !activeCustomerOrder) {
+    return (
+      <MarketplaceView
+        onSelectRestaurant={(selectedId) => {
+          setRestaurantId(selectedId);
+          navigate(`/restaurante/${selectedId}`);
+        }}
+      />
+    );
+  }
+
+  return (
+    <CustomerView
+      socketConnected={connected}
+      orderStatus={activeCustomerOrder?.status || null}
+      activeOrder={activeCustomerOrder}
+      driverLocation={driverLocation}
+      restaurantLocation={restaurantLocation}
+      customerLocation={customerLocation}
+      onCreateOrder={onCreateOrder}
+      isLoading={isLoading}
+      onResetOrder={() => {
+        onResetOrder();
+        navigate('/');
+      }}
+      restaurantId={effectiveRestaurantId}
+    />
+  );
+};
+
+function AppContent() {
+  const { user, isAuthenticated, quickLogin } = useAuth();
+  const { addToast } = useToast();
+  const { address } = useAddress();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // SocketContext desacoplado
+  const { ordersSocket, deliverySocket, connected, joinOrderRoom, joinRestaurantRoom } =
+    useSocket();
+
+  const [currentRole, setCurrentRole] = useState<Role>('CUSTOMER');
 
   // Pedidos e Telemetria
   const [orders, setOrders] = useState<RestaurantOrder[]>([]);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const [driverLocation, setDriverLocation] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  /**
-   * CONCEITO: Restaurant ID 
-   *
-   * Antes: usávamos 'rest-123' hardcoded em todo lugar — uma falha de segurança.
-   * Agora: o restaurantId é buscado dinamicamente do backend:
-   *   - RESTAURANT_OWNER: GET /api/v1/restaurants/my/restaurant (owner logado)
-   *   - CUSTOMER: GET /api/v1/restaurants (retorna lista, usa o primeiro disponível)
-   *
-   */
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
 
-  const { address } = useAddress();
   // Coordenadas fixas do Restaurante (Praça Cel. José Vieira - Centro)
   const RESTAURANT_LOC = { lat: -22.5538, lng: -45.7796 };
   // Coordenadas reais dinâmicas do Cliente (ViaCEP / OpenStreetMap)
   const customerLoc = { lat: address.lat, lng: address.lng };
 
-  // Auto-select role por perfil do usuário
+  // Sincroniza tab ativa com a rota URL
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.startsWith('/pedidos')) {
+      setCurrentRole('HISTORY');
+    } else if (path.startsWith('/kds')) {
+      setCurrentRole('RESTAURANT');
+    } else if (path.startsWith('/gestao')) {
+      setCurrentRole('MANAGEMENT');
+    } else if (path.startsWith('/dashboard')) {
+      setCurrentRole('DASHBOARD');
+    } else if (path.startsWith('/entregas')) {
+      setCurrentRole('DRIVER');
+    } else {
+      setCurrentRole('CUSTOMER');
+    }
+  }, [location.pathname]);
+
+  // Auto-select role ao logar caso esteja na raiz
   useEffect(() => {
     if (user) {
       const defaultRole = DEFAULT_ROLE_MAP[user.role] || 'CUSTOMER';
       setCurrentRole(defaultRole);
-    } else {
-      setCurrentRole('CUSTOMER');
+      if (location.pathname === '/') {
+        if (defaultRole === 'RESTAURANT') navigate('/kds');
+        else if (defaultRole === 'DRIVER') navigate('/entregas');
+      }
     }
   }, [user]);
 
-  /**
-   * CONCEITO: restaurantId
-   *
-   * Este useEffect substitui todos os 'rest-123' hardcoded.
-   * - Se o usuário é RESTAURANT_OWNER: busca SEU restaurante
-   * - Se é CUSTOMER ou outro: busca a lista pública de restaurantes
-   *
-   * O ID é armazenado em estado e propagado para todas as chamadas de API.
-   */
+  // Carrega restaurantId baseado no perfil do usuário
   useEffect(() => {
     const fetchRestaurantId = async () => {
       try {
         if (user?.role === 'RESTAURANT_OWNER') {
-          // Owner logado
           const restaurant = await apiFetch<any>('/api/v1/restaurants/my/restaurant');
           if (restaurant?.id) {
             setRestaurantId(restaurant.id);
           }
         } else if (user?.role === 'DRIVER' || user?.role === 'ADMIN') {
-          // por enquanto usa o primeiro restaurante para a fila
           const restaurants = await apiFetch<any[]>('/api/v1/restaurants');
           if (Array.isArray(restaurants) && restaurants.length > 0) {
             setRestaurantId(restaurants[0].id);
           }
         }
-        // não auto-seleciona, pois verá o MarketplaceView primeiro
       } catch (err) {
         console.log('Erro ao buscar restaurantId:', err);
       }
@@ -134,8 +255,8 @@ function AppContent() {
     fetchRestaurantId();
   }, [user]);
 
-  // Carregar pedidos:
-  // - Se for DRIVER: busca todas as entregas disponíveis na cidade (/api/v1/orders/available-deliveries)
+  // Carrega pedidos:
+  // - Se for DRIVER: busca todas as entregas disponíveis (/api/v1/orders/available-deliveries)
   // - Se for RESTAURANT / KDS: busca os pedidos do restaurante específico
   useEffect(() => {
     if (currentRole === 'DRIVER' || user?.role === 'DRIVER') {
@@ -182,28 +303,10 @@ function AppContent() {
       .catch((err) => console.log('Histórico inicial:', err));
   }, [restaurantId, currentRole, user]);
 
-  // Conexão e sincronização com WebSocket
+  // Listeners de eventos de WebSocket
   useEffect(() => {
-    const socketOptions = token ? { auth: { token } } : {};
-    const ordSocket = io(`${API_BASE_URL}/orders`, socketOptions);
-    const dlvSocket = io(`${API_BASE_URL}/delivery`, socketOptions);
+    if (!ordersSocket || !deliverySocket) return;
 
-    setOrdersSocket(ordSocket);
-    setDeliverySocket(dlvSocket);
-
-    ordSocket.on('connect', () => {
-      setConnected(true);
-      if (restaurantId) {
-        ordSocket.emit('joinRestaurantRoom', { restaurantId });
-      }
-      if (currentOrderId) {
-        ordSocket.emit('joinOrderRoom', { orderId: currentOrderId });
-      }
-    });
-
-    ordSocket.on('disconnect', () => setConnected(false));
-
-    // Novo pedido recebido
     const handleNewOrder = (order: any) => {
       const formattedOrder: RestaurantOrder = {
         id: order.id,
@@ -223,7 +326,6 @@ function AppContent() {
 
       setCurrentOrderId((prev) => prev || formattedOrder.id);
 
-      // Toast de novo pedido (para o restaurante)
       addToast({
         type: 'warning',
         title: 'Novo Pedido Recebido!',
@@ -231,10 +333,9 @@ function AppContent() {
       });
     };
 
-    ordSocket.on('newOrder', handleNewOrder);
-    ordSocket.on('orderCreated', handleNewOrder);
+    ordersSocket.on('newOrder', handleNewOrder);
+    ordersSocket.on('orderCreated', handleNewOrder);
 
-    // Mudança de status 
     const handleStatusChanged = (data: { orderId: string; status: OrderStatus | string }) => {
       const frontendStatus = mapToFrontendStatus(data.status);
       setOrders((prev) => {
@@ -243,7 +344,6 @@ function AppContent() {
           return prev.map((o) => (o.id === data.orderId ? { ...o, status: frontendStatus } : o));
         }
 
-        // Se o pedido não estava na lista (ex: nova entrega pronta no app do motorista), busca dados completos e insere
         if (frontendStatus === 'READY') {
           apiFetch<any>(`/api/v1/orders/${data.orderId}`)
             .then((newOrd) => {
@@ -259,7 +359,10 @@ function AppContent() {
                   items: newOrd.items,
                   restaurant: newOrd.restaurant,
                 };
-                setOrders((current) => [formatted, ...current.filter((o) => o.id !== formatted.id)]);
+                setOrders((current) => [
+                  formatted,
+                  ...current.filter((o) => o.id !== formatted.id),
+                ]);
               }
             })
             .catch((err) => console.log('Erro ao carregar detalhes do novo pedido pronto:', err));
@@ -267,7 +370,6 @@ function AppContent() {
         return prev;
       });
 
-      // Toast de mudança de status
       const toastConfig = statusToastMessages[frontendStatus];
       if (toastConfig) {
         addToast(toastConfig);
@@ -277,17 +379,15 @@ function AppContent() {
         audioSynth.playSuccessSound();
       }
 
-      // Notifica componentes que escutam evento global (ex: OrderHistoryView)
       window.dispatchEvent(
         new CustomEvent('order:status-changed', {
           detail: { orderId: data.orderId, status: data.status, frontendStatus },
-        })
+        }),
       );
     };
 
-    ordSocket.on('orderStatusChanged', handleStatusChanged);
+    ordersSocket.on('orderStatusChanged', handleStatusChanged);
 
-    // Telemetria do entregador (GPS em Ruas Reais com OSRM)
     const handleLocationUpdate = (data: any) => {
       setDriverLocation({
         lat: data.lat,
@@ -305,10 +405,10 @@ function AppContent() {
       }
     };
 
-    dlvSocket.on('driverLocationUpdate', handleLocationUpdate);
-    dlvSocket.on('locationUpdate', handleLocationUpdate);
+    deliverySocket.on('driverLocationUpdate', handleLocationUpdate);
+    deliverySocket.on('locationUpdate', handleLocationUpdate);
 
-    dlvSocket.on('driverArrived', (data: { orderId: string }) => {
+    const handleDriverArrived = (data: { orderId: string }) => {
       window.dispatchEvent(new CustomEvent('driver:arrived', { detail: data }));
       addToast({
         type: 'success',
@@ -317,47 +417,45 @@ function AppContent() {
         duration: 8000,
       });
       audioSynth.playNotificationSound();
-    });
+    };
 
-    dlvSocket.on('deliveryComplete', () => {
+    deliverySocket.on('driverArrived', handleDriverArrived);
+
+    const handleDeliveryComplete = () => {
       setDriverLocation(null);
       audioSynth.playSuccessSound();
-    });
+    };
+
+    deliverySocket.on('deliveryComplete', handleDeliveryComplete);
 
     return () => {
-      ordSocket.disconnect();
-      dlvSocket.disconnect();
-      setConnected(false);
+      ordersSocket.off('newOrder', handleNewOrder);
+      ordersSocket.off('orderCreated', handleNewOrder);
+      ordersSocket.off('orderStatusChanged', handleStatusChanged);
+      deliverySocket.off('driverLocationUpdate', handleLocationUpdate);
+      deliverySocket.off('locationUpdate', handleLocationUpdate);
+      deliverySocket.off('driverArrived', handleDriverArrived);
+      deliverySocket.off('deliveryComplete', handleDeliveryComplete);
     };
-  }, [token]);
+  }, [ordersSocket, deliverySocket]);
 
-  // Entrar na room do restaurante quando restaurantId mudar
+  // Entrar nas rooms quando IDs mudarem
   useEffect(() => {
-    if (ordersSocket && connected && restaurantId) {
-      ordersSocket.emit('joinRestaurantRoom', { restaurantId });
+    if (restaurantId) {
+      joinRestaurantRoom(restaurantId);
     }
-  }, [ordersSocket, connected, restaurantId]);
+  }, [restaurantId, joinRestaurantRoom]);
 
-  // Entrar na room do pedido quando currentOrderId mudar
   useEffect(() => {
-    if (ordersSocket && connected && currentOrderId) {
-      ordersSocket.emit('joinOrderRoom', { orderId: currentOrderId });
-      deliverySocket?.emit('joinDeliveryRoom', { orderId: currentOrderId });
+    if (currentOrderId) {
+      joinOrderRoom(currentOrderId);
     }
-  }, [ordersSocket, deliverySocket, connected, currentOrderId]);
-
-  // Entrar na room de entrega quando houver corrida ativa
-  useEffect(() => {
-    const activeDel = orders.find((o) => o.status === 'ON_THE_WAY' || o.status === 'READY');
-    if (deliverySocket && connected && activeDel) {
-      deliverySocket.emit('joinDeliveryRoom', { orderId: activeDel.id });
-    }
-  }, [orders, deliverySocket, connected]);
+  }, [currentOrderId, joinOrderRoom]);
 
   // Criar pedido
   const handleCreateOrder = async (
     items: Array<{ menuItemId: string; quantity: number }>,
-    notes?: string
+    notes?: string,
   ) => {
     if (!restaurantId) {
       addToast({
@@ -393,15 +491,15 @@ function AppContent() {
         totalPrice: data.totalPrice,
         notes: data.notes,
         restaurantId: data.restaurantId || restaurantId,
-        customer: data.customer || (user ? { id: user.id, name: user.name, phone: user.phone } : undefined),
+        customer:
+          data.customer ||
+          (user ? { id: user.id, name: user.name, phone: user.phone } : undefined),
         items: data.items,
       };
 
       setOrders((prev) => [newOrder, ...prev.filter((o) => o.id !== newOrder.id)]);
       setCurrentOrderId(data.id);
-
-      ordersSocket?.emit('joinOrderRoom', { orderId: data.id });
-      deliverySocket?.emit('joinDeliveryRoom', { orderId: data.id });
+      joinOrderRoom(data.id);
 
       addToast({
         type: 'success',
@@ -420,15 +518,11 @@ function AppContent() {
     }
   };
 
-  // Atualizar status do pedido 
+  // Atualizar status do pedido
   const handleUpdateStatus = async (orderId: string, status: OrderStatus) => {
-    
     setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)));
-
     const backendStatus = mapToBackendStatus(status);
 
-
-    // O backend (OrdersController) persiste no PostgreSQL e emite o WebSocket broadcast para todos
     try {
       await apiFetch(`/api/v1/orders/${orderId}/status`, {
         method: 'PATCH',
@@ -436,7 +530,6 @@ function AppContent() {
       });
     } catch (error: any) {
       console.error(`Erro ao persistir status do pedido ${orderId} via REST:`, error);
-      // Fallback: se o REST falhar, tenta emitir via WebSocket diretamente
       if (ordersSocket) {
         ordersSocket.emit('updateOrderStatus', { orderId, status: backendStatus });
       }
@@ -453,7 +546,6 @@ function AppContent() {
       message: 'Navegue até o restaurante para coletar o pedido.',
     });
 
-    // Inicia simulação visual no mapa imediatamente
     window.dispatchEvent(new CustomEvent('map:start-simulation'));
 
     try {
@@ -501,9 +593,7 @@ function AppContent() {
 
   const pendingCount = orders.filter((o) => o.status === 'PENDING').length;
   const activeCustomerOrder = orders.find((o) => o.id === currentOrderId);
-
-  /** UserRole */
-  const userRole: UserRole = user?.role as UserRole || null;
+  const userRole: UserRole = (user?.role as UserRole) || null;
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 p-3 md:p-6 font-sans antialiased selection:bg-brand-500 selection:text-white relative">
@@ -540,58 +630,85 @@ function AppContent() {
           </div>
         </div>
 
-        {/* Views */}
+        {/* Rotas SPA com React.lazy e Suspense */}
         <main>
-          {currentRole === 'CUSTOMER' && !restaurantId && !activeCustomerOrder && (
-            <MarketplaceView onSelectRestaurant={(id) => setRestaurantId(id)} />
-          )}
-
-          {currentRole === 'CUSTOMER' && (restaurantId || activeCustomerOrder) && (
-            <CustomerView
-              socketConnected={connected}
-              orderStatus={activeCustomerOrder?.status || null}
-              activeOrder={activeCustomerOrder}
-              driverLocation={driverLocation}
-              restaurantLocation={RESTAURANT_LOC}
-              customerLocation={customerLoc}
-              onCreateOrder={handleCreateOrder}
-              isLoading={isLoading}
-              onResetOrder={() => {
-                setCurrentOrderId(null);
-                setRestaurantId(null);
-              }}
-              restaurantId={activeCustomerOrder?.restaurantId || restaurantId}
-            />
-          )}
-
-          {currentRole === 'HISTORY' && <OrderHistoryView />}
-
-          {currentRole === 'RESTAURANT' && (
-            <RestaurantView
-              orders={orders}
-              onUpdateStatus={handleUpdateStatus}
-              onClearOrders={handleClearOrders}
-            />
-          )}
-
-          {currentRole === 'MANAGEMENT' && (
-            <MenuManagementView restaurantId={restaurantId} />
-          )}
-
-          {currentRole === 'DASHBOARD' && (
-            <DashboardView restaurantId={restaurantId} />
-          )}
-
-          {currentRole === 'DRIVER' && (
-            <DriverView
-              orders={orders}
-              onAcceptDelivery={handleAcceptDelivery}
-              onCompleteDelivery={handleCompleteDelivery}
-              driverLocation={driverLocation}
-              restaurantLocation={RESTAURANT_LOC}
-              customerLocation={customerLoc}
-            />
-          )}
+          <Suspense fallback={<ViewLoadingSkeleton />}>
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <CustomerRouteWrapper
+                    connected={connected}
+                    activeCustomerOrder={activeCustomerOrder}
+                    driverLocation={driverLocation}
+                    restaurantLocation={RESTAURANT_LOC}
+                    customerLocation={customerLoc}
+                    onCreateOrder={handleCreateOrder}
+                    isLoading={isLoading}
+                    onResetOrder={() => {
+                      setCurrentOrderId(null);
+                      setRestaurantId(null);
+                    }}
+                    restaurantId={restaurantId}
+                    setRestaurantId={setRestaurantId}
+                  />
+                }
+              />
+              <Route
+                path="/restaurante/:id"
+                element={
+                  <CustomerRouteWrapper
+                    connected={connected}
+                    activeCustomerOrder={activeCustomerOrder}
+                    driverLocation={driverLocation}
+                    restaurantLocation={RESTAURANT_LOC}
+                    customerLocation={customerLoc}
+                    onCreateOrder={handleCreateOrder}
+                    isLoading={isLoading}
+                    onResetOrder={() => {
+                      setCurrentOrderId(null);
+                      setRestaurantId(null);
+                    }}
+                    restaurantId={restaurantId}
+                    setRestaurantId={setRestaurantId}
+                  />
+                }
+              />
+              <Route path="/pedidos" element={<OrderHistoryView />} />
+              <Route
+                path="/kds"
+                element={
+                  <RestaurantView
+                    orders={orders}
+                    onUpdateStatus={handleUpdateStatus}
+                    onClearOrders={handleClearOrders}
+                  />
+                }
+              />
+              <Route
+                path="/gestao"
+                element={<MenuManagementView restaurantId={restaurantId} />}
+              />
+              <Route
+                path="/dashboard"
+                element={<DashboardView restaurantId={restaurantId} />}
+              />
+              <Route
+                path="/entregas"
+                element={
+                  <DriverView
+                    orders={orders}
+                    onAcceptDelivery={handleAcceptDelivery}
+                    onCompleteDelivery={handleCompleteDelivery}
+                    driverLocation={driverLocation}
+                    restaurantLocation={RESTAURANT_LOC}
+                    customerLocation={customerLoc}
+                  />
+                }
+              />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
         </main>
       </div>
     </div>
@@ -599,19 +716,25 @@ function AppContent() {
 }
 
 /**
- * CONCEITO: Composição de Providers
+ * CONCEITO: Composição de Providers com React Router
  *
- * AuthProvider > ToastProvider > AddressProvider > AppContent + AddressModal
+ * BrowserRouter > AuthProvider > ToastProvider > AddressProvider > CartProvider > SocketProvider
  */
 export default function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <AddressProvider>
-          <AppContent />
-          <AddressModal />
-        </AddressProvider>
-      </ToastProvider>
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <ToastProvider>
+          <AddressProvider>
+            <CartProvider>
+              <SocketProvider>
+                <AppContent />
+                <AddressModal />
+              </SocketProvider>
+            </CartProvider>
+          </AddressProvider>
+        </ToastProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }

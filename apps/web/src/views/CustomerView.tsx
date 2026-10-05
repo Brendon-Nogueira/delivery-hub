@@ -19,6 +19,8 @@ import { MapTracker } from '../components/MapTracker';
 import { apiFetch } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useAddress } from '../contexts/AddressContext';
+import { useCart } from '../contexts/CartContext';
+import { Skeleton } from '../components/ui/Skeleton';
 import { resolveOrderCoordinates } from '../services/geocodingService';
 import { AuthModal } from '../components/AuthModal';
 
@@ -79,11 +81,23 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Estados do Carrinho & Drawer
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [notes, setNotes] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CARTAO' | 'DINHEIRO'>('PIX');
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  // Cart Global Persistente com Validação Multi-Loja
+  const {
+    cart,
+    addToCart,
+    removeFromCart,
+    clearItem,
+    clearCart,
+    notes,
+    setNotes,
+    paymentMethod,
+    setPaymentMethod,
+    isDrawerOpen,
+    openDrawer,
+    closeDrawer,
+    totalCount: totalCartCount,
+    subtotal,
+  } = useCart();
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
   // Resolução de endereço e coordenadas reais do pedido ativo
@@ -144,46 +158,27 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
     };
   }, [restaurantId]);
 
-  // Handlers do Carrinho
+  // Handlers do Carrinho conectados ao CartContext
   const handleAddToCart = (item: MenuItem) => {
-    setCart((prev) => {
-      const existing = prev.find((ci) => ci.item.id === item.id);
-      if (existing) {
-        return prev.map((ci) =>
-          ci.item.id === item.id ? { ...ci, quantity: ci.quantity + 1 } : ci
-        );
-      }
-      return [...prev, { item, quantity: 1 }];
-    });
+    addToCart(
+      item,
+      restaurant
+        ? { id: restaurant.id, name: restaurant.name, deliveryFee: Number(restaurant.deliveryFee) }
+        : undefined,
+    );
   };
 
   const handleRemoveFromCart = (item: MenuItem) => {
-    setCart((prev) => {
-      const existing = prev.find((ci) => ci.item.id === item.id);
-      if (!existing) return prev;
-      if (existing.quantity <= 1) {
-        return prev.filter((ci) => ci.item.id !== item.id);
-      }
-      return prev.map((ci) =>
-        ci.item.id === item.id ? { ...ci, quantity: ci.quantity - 1 } : ci
-      );
-    });
+    removeFromCart(item);
   };
 
   const handleClearItem = (itemId: string) => {
-    setCart((prev) => prev.filter((ci) => ci.item.id !== itemId));
+    clearItem(itemId);
   };
 
   const getItemQuantity = (itemId: string) => {
     return cart.find((ci) => ci.item.id === itemId)?.quantity || 0;
   };
-
-  const totalCartCount = cart.reduce((acc, curr) => acc + curr.quantity, 0);
-
-  const subtotal = cart.reduce((acc, curr) => {
-    const price = typeof curr.item.price === 'string' ? parseFloat(curr.item.price) : curr.item.price;
-    return acc + price * curr.quantity;
-  }, 0);
 
   const deliveryFee = restaurant ? Number(restaurant.deliveryFee) : 5.0;
   const grandTotal = subtotal > 0 ? subtotal + deliveryFee : 0;
@@ -202,8 +197,8 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
     }));
 
     await onCreateOrder(payloadItems, notes.trim() || undefined);
-    setCart([]);
-    setIsDrawerOpen(false);
+    clearCart();
+    closeDrawer();
   };
 
   // Categorias Dinâmicas
@@ -436,7 +431,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
           {/* Botão de Sacola no Banner */}
           {totalCartCount > 0 && (
             <button
-              onClick={() => setIsDrawerOpen(true)}
+              onClick={openDrawer}
               className="flex items-center justify-between gap-3 px-5 py-3 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm shadow-sm active:scale-[0.98] transition-all"
             >
               <div className="flex items-center gap-2">
@@ -512,14 +507,14 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div
               key={i}
-              className="h-72 rounded-2xl bg-white border border-zinc-200/60 animate-pulse p-4 flex flex-col justify-between shadow-card"
+              className="h-72 rounded-2xl bg-white border border-zinc-200/60 p-4 flex flex-col justify-between shadow-card"
             >
-              <div className="h-36 bg-zinc-100 rounded-xl" />
-              <div className="h-4 bg-zinc-100 rounded w-3/4 mt-3" />
-              <div className="h-3 bg-zinc-100 rounded w-1/2" />
+              <Skeleton className="h-36 w-full rounded-xl" />
+              <Skeleton className="h-4 w-3/4 mt-3" />
+              <Skeleton className="h-3 w-1/2" />
               <div className="flex justify-between items-center mt-4">
-                <div className="h-6 bg-zinc-100 rounded w-20" />
-                <div className="h-8 bg-zinc-100 rounded w-24" />
+                <Skeleton className="h-6 w-20" />
+                <Skeleton className="h-8 w-24 rounded-xl" />
               </div>
             </div>
           ))}
@@ -571,7 +566,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
             </div>
 
             <button
-              onClick={() => setIsDrawerOpen(true)}
+              onClick={openDrawer}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs transition-all shadow-sm active:scale-[0.98]"
             >
               <span>Ver Sacola</span>
@@ -584,7 +579,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
       {/* Drawer da Sacola Renderizado via createPortal (Sempre no topo da tela) */}
       <CartDrawer
         isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
+        onClose={closeDrawer}
         cart={cart}
         onAddToCart={handleAddToCart}
         onRemoveFromCart={handleRemoveFromCart}
@@ -605,7 +600,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
         onClose={() => setAuthModalOpen(false)}
         onSuccess={() => {
           setAuthModalOpen(false);
-          setIsDrawerOpen(true);
+          openDrawer();
         }}
       />
     </div>
