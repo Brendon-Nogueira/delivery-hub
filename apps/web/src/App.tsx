@@ -379,6 +379,11 @@ function AppContent() {
         audioSynth.playSuccessSound();
       }
 
+      if (frontendStatus === 'ON_THE_WAY') {
+        joinOrderRoom(data.orderId);
+        window.dispatchEvent(new CustomEvent('map:start-simulation'));
+      }
+
       window.dispatchEvent(
         new CustomEvent('order:status-changed', {
           detail: { orderId: data.orderId, status: data.status, frontendStatus },
@@ -451,6 +456,14 @@ function AppContent() {
       joinOrderRoom(currentOrderId);
     }
   }, [currentOrderId, joinOrderRoom]);
+
+  // Entrar automaticamente na room de entrega quando houver corrida ativa ou pronta
+  useEffect(() => {
+    const activeDel = orders.find((o) => o.status === 'ON_THE_WAY' || o.status === 'READY');
+    if (activeDel) {
+      joinOrderRoom(activeDel.id);
+    }
+  }, [orders, joinOrderRoom]);
 
   // Criar pedido
   const handleCreateOrder = async (
@@ -538,6 +551,7 @@ function AppContent() {
 
   // Aceitar entrega
   const handleAcceptDelivery = async (orderId: string) => {
+    joinOrderRoom(orderId);
     await handleUpdateStatus(orderId, 'ON_THE_WAY');
 
     addToast({

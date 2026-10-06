@@ -298,12 +298,31 @@ export const MapTracker: React.FC<MapTrackerProps> = ({
     }, stepDuration);
   }, [routeData, onArrival, customerAddressName, customerLocation]);
 
+  const pendingAutoStartRef = useRef(false);
+
   // Escuta comando externo (ex: clique no botão 'Replay Rota') para iniciar simulação
   useEffect(() => {
-    const handleStartSim = () => startSimulation();
+    const handleStartSim = () => {
+      if (routeData && routeData.coordinates && routeData.coordinates.length > 0) {
+        startSimulation();
+      } else {
+        pendingAutoStartRef.current = true;
+      }
+    };
     window.addEventListener('map:start-simulation', handleStartSim);
     return () => window.removeEventListener('map:start-simulation', handleStartSim);
-  }, [startSimulation]);
+  }, [startSimulation, routeData]);
+
+  // Disparo AUTOMÁTICO da simulação e traçado assim que a rota carregar e a corrida estiver ativa
+  useEffect(() => {
+    if (!routeData || !routeData.coordinates || routeData.coordinates.length === 0) return;
+
+    const isActiveTrip = orderStatus === 'ON_THE_WAY' || orderStatus === 'IN_TRANSIT';
+    if ((isActiveTrip || pendingAutoStartRef.current) && !isSimulating && !hasArrived) {
+      pendingAutoStartRef.current = false;
+      startSimulation();
+    }
+  }, [routeData, orderStatus, startSimulation, isSimulating, hasArrived]);
 
   // Limpa timer ao desmontar
   useEffect(() => {

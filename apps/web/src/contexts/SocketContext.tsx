@@ -50,17 +50,43 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   }, [token]);
 
+  const joinedRoomsRef = React.useRef<{ orders: Set<string>; restaurants: Set<string> }>({
+    orders: new Set(),
+    restaurants: new Set(),
+  });
+
+  useEffect(() => {
+    if (ordersSocket && connected) {
+      joinedRoomsRef.current.orders.forEach((orderId) => {
+        ordersSocket.emit('joinOrderRoom', { orderId });
+      });
+      joinedRoomsRef.current.restaurants.forEach((restaurantId) => {
+        ordersSocket.emit('joinRestaurantRoom', { restaurantId });
+      });
+    }
+    if (deliverySocket && connected) {
+      joinedRoomsRef.current.orders.forEach((orderId) => {
+        deliverySocket.emit('joinDeliveryRoom', { orderId });
+      });
+    }
+  }, [connected, ordersSocket, deliverySocket]);
+
   const joinOrderRoom = useCallback(
     (orderId: string) => {
+      joinedRoomsRef.current.orders.add(orderId);
       if (ordersSocket && ordersSocket.connected) {
         ordersSocket.emit('joinOrderRoom', { orderId });
       }
+      if (deliverySocket && deliverySocket.connected) {
+        deliverySocket.emit('joinDeliveryRoom', { orderId });
+      }
     },
-    [ordersSocket],
+    [ordersSocket, deliverySocket],
   );
 
   const joinRestaurantRoom = useCallback(
     (restaurantId: string) => {
+      joinedRoomsRef.current.restaurants.add(restaurantId);
       if (ordersSocket && ordersSocket.connected) {
         ordersSocket.emit('joinRestaurantRoom', { restaurantId });
       }
